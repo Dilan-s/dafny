@@ -11,6 +11,7 @@ boogie: ${DIR}/boogie/Binaries/Boogie.exe
 
 tests:
 	(cd ${DIR}; dotnet test Source/IntegrationTests)
+	(cd ${DIR}; dotnet test Source/Stryker.sln )
 
 tests-verbose:
 	(cd ${DIR}; dotnet test --logger "console;verbosity=normal" Source/IntegrationTests )
@@ -50,7 +51,7 @@ format:
 	dotnet tool run dotnet-format -w -s error Source/Dafny.sln --exclude DafnyCore/Scanner.cs --exclude DafnyCore/Parser.cs
 
 clean:
-	(cd ${DIR}; cd Source; rm -rf Dafny/bin Dafny/obj DafnyDriver/bin DafnyDriver/obj DafnyRuntime/obj DafnyRuntime/bin DafnyServer/bin DafnyServer/obj DafnyPipeline/obj DafnyPipeline/bin DafnyCore/obj DafnyCore/bin)
+	(cd ${DIR}; cd Source; rm -rf Dafny/bin Dafny/obj DafnyDriver/bin DafnyDriver/obj DafnyRuntime/obj DafnyRuntime/bin DafnyServer/bin DafnyServer/obj DafnyPipeline/obj DafnyPipeline/bin DafnyCore/obj DafnyCore/bin StrykerTests/obj StrykerTests/bin IntegrationTests/obj IntegrationTests/bin)
 	(cd ${DIR} ; dotnet build Source/Dafny.sln -v:q --nologo -target:clean )
 	make -C ${DIR}/Source/DafnyCore -f Makefile clean
 	(cd ${DIR}/Source/Dafny && rm -rf Scanner.cs Parser.cs obj )

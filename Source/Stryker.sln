@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StrykerTests", "StrykerTests\StrykerTests.csproj", "{A017750E-7325-4A8B-AA1F-7677921151B8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "DafnyCore", "DafnyCore\DafnyCore.csproj", "{13FF4A0B-39AC-442F-BA96-B8B357A5691E}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{A017750E-7325-4A8B-AA1F-7677921151B8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A017750E-7325-4A8B-AA1F-7677921151B8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A017750E-7325-4A8B-AA1F-7677921151B8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A017750E-7325-4A8B-AA1F-7677921151B8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{13FF4A0B-39AC-442F-BA96-B8B357A5691E}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{13FF4A0B-39AC-442F-BA96-B8B357A5691E}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{13FF4A0B-39AC-442F-BA96-B8B357A5691E}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{13FF4A0B-39AC-442F-BA96-B8B357A5691E}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

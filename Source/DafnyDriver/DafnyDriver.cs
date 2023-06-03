@@ -676,30 +676,24 @@ namespace Microsoft.Dafny {
         output.WriteLine();
         output.Write("{0} did not attempt verification", options.DescriptiveToolName);
         if (stats.InconclusiveCount != 0) {
-          throw new Exception("FAIL");
           output.Write(", {0} inconclusive{1}", stats.InconclusiveCount, Util.Plural(stats.InconclusiveCount));
         }
         if (stats.TimeoutCount != 0) {
-          throw new Exception("FAIL");
           output.Write(", {0} time out{1}", stats.TimeoutCount, Util.Plural(stats.TimeoutCount));
         }
         if (stats.OutOfMemoryCount != 0) {
-          throw new Exception("FAIL");
           output.Write(", {0} out of memory", stats.OutOfMemoryCount);
         }
         if (stats.OutOfResourceCount != 0) {
-          throw new Exception("FAIL");
           output.Write(", {0} out of resource", stats.OutOfResourceCount);
         }
         if (stats.SolverExceptionCount != 0) {
-          throw new Exception("FAIL");
           output.Write(", {0} solver exceptions", stats.SolverExceptionCount);
         }
 
         output.WriteLine();
         output.Flush();
       } else {
-        throw new Exception("FAIL");
         // This calls a routine within Boogie
         options.Printer.WriteTrailer(output, stats);
       }
@@ -906,12 +900,10 @@ namespace Microsoft.Dafny {
       }
 
       if (targetProgramHasErrors) {
-        throw new Exception("Smoke fail");
         return false;
       }
       // If we got here, compilation succeeded
       if (!invokeCompiler) {
-        throw new Exception("Smoke fail");
         return true; // If we're not asked to invoke the target compiler, we can report success
       }
 
@@ -929,13 +921,11 @@ namespace Microsoft.Dafny {
             paths.Filename, otherFileNames, compilationResult, outputWriter, errorWriter);
         } else {
           // make sure to give some feedback to the user
-          throw new Exception("Smoke fail");
           if (options.Verbose) {
             await outputWriter.WriteLineAsync("Program compiled successfully");
           }
         }
       } else {
-          throw new Exception("Smoke fail");
       }
       
       if (options.DeleteCodeAfterRun) {

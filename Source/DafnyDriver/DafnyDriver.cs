@@ -925,6 +925,7 @@ namespace Microsoft.Dafny {
             await outputWriter.WriteLineAsync("Program compiled successfully");
           }
         }
+      } else {
       }
       
       if (options.DeleteCodeAfterRun) {

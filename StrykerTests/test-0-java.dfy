@@ -1,4 +1,4 @@
-// RUN: %dafny /noVerify /deleteCodeAfterRun:1 /compile:4 /compileTarget:js "%s" > "%t"
+// RUN: %dafny /noVerify /deleteCodeAfterRun:1 /compile:4 /compileTarget:java "%s" > "%t"
 // RUN: %diff "%s.expect" "%t"
 // Seed: 1863456124
 // This is a RANDOMLY GENERATED PROGRAM.

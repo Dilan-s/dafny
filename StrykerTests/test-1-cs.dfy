@@ -1,336 +1,1140 @@
 // RUN: %dafny /noVerify /deleteCodeAfterRun:1 /compile:4 /compileTarget:cs "%s" > "%t"
 // RUN: %diff "%s.expect" "%t"
-datatype DT_1<T_1, T_2> = DT_1_1 | DT_1_2 | DT_1_3(DT_1_3_1: T_2, DT_1_3_2: T_2, DT_1_3_3: T_2, DT_1_3_4: T_2)
-method safe_index_seq(p_safe_index_seq_1: seq, p_safe_index_seq_2: int) returns (ret_1: int)
-	ensures ((0 <= p_safe_index_seq_2 < |p_safe_index_seq_1|) ==> (ret_1 == p_safe_index_seq_2)) && ((0 > p_safe_index_seq_2 || p_safe_index_seq_2 >= |p_safe_index_seq_1|) ==> (ret_1 == 0));
-{
-	return (if (((p_safe_index_seq_2 < |p_safe_index_seq_1|) && (0 <= p_safe_index_seq_2))) then (p_safe_index_seq_2) else (0));
+// Seed: 1623337200
+// This is a RANDOMLY GENERATED PROGRAM.
+// Fuzzer: dafny
+// Version: dafny, xsmith 2.0.5 (38f1d83), in Racket 8.6 (vm-type chez-scheme)
+// Options: --with-print-constrained true --timeout 300 --dafny-syntax true
+// Seed: 1623337200
+// 
+
+function safeDivide (a : int, b : int) : int {
+  if b == 0 then 0 else a / b
 }
 
-method safe_min_max(p_safe_min_max_1: int, p_safe_min_max_2: int) returns (ret_1: int, ret_2: int)
-	ensures ((p_safe_min_max_1 < p_safe_min_max_2) ==> ((ret_1 <= ret_2) && (ret_1 == p_safe_min_max_1) && (ret_2 == p_safe_min_max_2))) && ((p_safe_min_max_1 >= p_safe_min_max_2) ==> ((ret_1 <= ret_2) && (ret_1 == p_safe_min_max_2) && (ret_2 == p_safe_min_max_1)));
-{
-	return (if ((p_safe_min_max_1 < p_safe_min_max_2)) then (p_safe_min_max_1) else (p_safe_min_max_2)), (if ((p_safe_min_max_1 < p_safe_min_max_2)) then (p_safe_min_max_2) else (p_safe_min_max_1));
+function safeSeqRef<T> (s : seq<T>, i : int, default : T) : T {
+  if 0 <= i < |s| then s[i] else default
 }
 
-method m_method_8(p_m_method_8_1: char, p_m_method_8_2: char, p_m_method_8_3: char, p_m_method_8_4: char) returns (ret_1: DT_1<real, int>)
-	requires ((p_m_method_8_2 == 'X') && (p_m_method_8_1 == 'K') && (p_m_method_8_4 == 'n') && (p_m_method_8_3 == 'j'));
-	ensures (((p_m_method_8_2 == 'X') && (p_m_method_8_1 == 'K') && (p_m_method_8_4 == 'n') && (p_m_method_8_3 == 'j')) ==> ((ret_1.DT_1_3? && ((ret_1.DT_1_3_1 == 24) && (ret_1.DT_1_3_2 == 12) && (ret_1.DT_1_3_3 == 10) && (ret_1.DT_1_3_4 == 9)))));
-{
-	var v_seq_21: seq<char> := ['j', 'o'];
-	var v_int_30: int := 1;
-	var v_seq_22: seq<char> := ['m', 'C', 'v', 'k'];
-	var v_int_31: int := 5;
-	var v_seq_33: seq<char> := v_seq_22;
-	var v_int_45: int := v_int_31;
-	var v_int_46: int := safe_index_seq(v_seq_33, v_int_45);
-	v_int_31 := v_int_46;
-	var v_char_27: char, v_char_28: char, v_char_29: char := (if ((|v_seq_21| > 0)) then (v_seq_21[v_int_30]) else ('k')), p_m_method_8_2, (if ((|v_seq_22| > 0)) then (v_seq_22[v_int_31]) else ('i'));
-	var v_seq_23: seq<DT_1<real, int>> := [];
-	var v_int_32: int := -7;
-	var v_DT_1_3_4: DT_1<real, int> := DT_1_3(24, 12, 10, 9);
-	print "v_char_29", " ", (v_char_29 == 'm'), " ", "v_char_28", " ", (v_char_28 == 'X'), " ", "v_DT_1_3_4", " ", v_DT_1_3_4, " ", "v_char_27", " ", (v_char_27 == 'o'), " ", "p_m_method_8_4", " ", (p_m_method_8_4 == 'n'), " ", "v_DT_1_3_4.DT_1_3_3", " ", v_DT_1_3_4.DT_1_3_3, " ", "v_int_32", " ", v_int_32, " ", "v_DT_1_3_4.DT_1_3_4", " ", v_DT_1_3_4.DT_1_3_4, " ", "v_seq_21", " ", (v_seq_21 == ['j', 'o']), " ", "v_DT_1_3_4.DT_1_3_1", " ", v_DT_1_3_4.DT_1_3_1, " ", "v_seq_22", " ", (v_seq_22 == ['m', 'C', 'v', 'k']), " ", "v_DT_1_3_4.DT_1_3_2", " ", v_DT_1_3_4.DT_1_3_2, " ", "v_seq_23", " ", v_seq_23, " ", "p_m_method_8_1", " ", (p_m_method_8_1 == 'K'), " ", "p_m_method_8_3", " ", (p_m_method_8_3 == 'j'), " ", "p_m_method_8_2", " ", (p_m_method_8_2 == 'X'), " ", "v_int_31", " ", v_int_31, " ", "v_int_30", " ", v_int_30, "\n";
-	return (if ((|v_seq_23| > 0)) then (v_seq_23[v_int_32]) else (v_DT_1_3_4));
+function safeSeqSet<T> (s : seq<T>, i : int, val : T) : seq<T> {
+  if 0 <= i < |s| then s[i := val] else s
 }
 
-method m_method_7(p_m_method_7_1: char) returns (ret_1: seq<DT_1<real, int>>)
-	requires ((p_m_method_7_1 == 'I'));
-	ensures (((p_m_method_7_1 == 'I')) ==> (|ret_1| == 1 && (ret_1[0].DT_1_3? && ((ret_1[0].DT_1_3_1 == 9) && (ret_1[0].DT_1_3_2 == 19) && (ret_1[0].DT_1_3_3 == 29) && (ret_1[0].DT_1_3_4 == 21)))));
-{
-	var v_int_27: int, v_int_28: int := 18, -18;
-	for v_int_26 := v_int_27 downto v_int_28 
-		invariant (v_int_26 - v_int_28 >= 0)
-	{
-		if false {
-			continue;
-		}
-		var v_DT_1_3_1: DT_1<real, int> := DT_1_3(9, 19, 29, 21);
-		print "v_DT_1_3_1.DT_1_3_4", " ", v_DT_1_3_1.DT_1_3_4, " ", "v_DT_1_3_1", " ", v_DT_1_3_1, " ", "v_int_26", " ", v_int_26, " ", "v_DT_1_3_1.DT_1_3_2", " ", v_DT_1_3_1.DT_1_3_2, " ", "v_DT_1_3_1.DT_1_3_3", " ", v_DT_1_3_1.DT_1_3_3, " ", "v_DT_1_3_1.DT_1_3_1", " ", v_DT_1_3_1.DT_1_3_1, " ", "p_m_method_7_1", " ", (p_m_method_7_1 == 'I'), "\n";
-		return [v_DT_1_3_1];
-	}
-	var v_char_23: char, v_char_24: char, v_char_25: char := 'K', 'Q', 'R';
-	return [];
+function safeSeqTake<T> (s : seq<T>, x : int) : seq<T> {
+  if 0 <= x <= |s| then s[..x] else s
 }
 
-method safe_modulus(p_safe_modulus_1: int, p_safe_modulus_2: int) returns (ret_1: int)
-	ensures (p_safe_modulus_2 == 0 ==> ret_1 == p_safe_modulus_1) && (p_safe_modulus_2 != 0 ==> ret_1 == p_safe_modulus_1 % p_safe_modulus_2);
-{
-	return (if ((p_safe_modulus_2 != 0)) then ((p_safe_modulus_1 % p_safe_modulus_2)) else (p_safe_modulus_1));
+function safeSeqDrop<T> (s : seq<T>, x : int) : seq<T> {
+  if 0 <= x <= |s| then s[x..] else s
 }
 
-method m_method_6(p_m_method_6_1: char, p_m_method_6_2: char, p_m_method_6_3: char) returns (ret_1: seq<seq<real>>)
-	requires ((p_m_method_6_3 == 'j') && (p_m_method_6_2 == 'j') && (p_m_method_6_1 == 'j'));
-	ensures (((p_m_method_6_3 == 'j') && (p_m_method_6_2 == 'j') && (p_m_method_6_1 == 'j')) ==> (|ret_1| == 4 && |ret_1[0]| == 2 && (-2.48 < ret_1[0][0] < -2.28) && (-13.89 < ret_1[0][1] < -13.69) && |ret_1[1]| == 1 && (5.74 < ret_1[1][0] < 5.94) && |ret_1[2]| == 1 && (-3.70 < ret_1[2][0] < -3.50) && |ret_1[3]| == 0));
-{
-	print "p_m_method_6_3", " ", (p_m_method_6_3 == 'j'), " ", "p_m_method_6_2", " ", (p_m_method_6_2 == 'j'), " ", "p_m_method_6_1", " ", (p_m_method_6_1 == 'j'), "\n";
-	return ([[-2.38, -13.79], [5.84], [-3.60]] + [[]]);
+function safeSeqSubseq<T> (s : seq<T>, x : int, y : int) : seq<T> {
+  if 0 <= x <= y <= |s| then s[x..y] else s
 }
 
-method m_method_5(p_m_method_5_1: char, p_m_method_5_2: char) returns (ret_1: char)
-	requires ((p_m_method_5_1 == 'm') && (p_m_method_5_2 == 'O'));
-	ensures (((p_m_method_5_1 == 'm') && (p_m_method_5_2 == 'O')) ==> ((ret_1 == 'g')));
-{
-	assert ((p_m_method_5_1 == 'm') && (p_m_method_5_2 == 'O'));
-	expect ((p_m_method_5_1 == 'm') && (p_m_method_5_2 == 'O'));
-	print "p_m_method_5_2", " ", (p_m_method_5_2 == 'O'), " ", "p_m_method_5_1", " ", (p_m_method_5_1 == 'm'), "\n";
-	return 'g';
+function safeSeqSlice1Colon<T> (s : seq<T>, x : int) : seq<seq<T>> {
+  if 0 <= x <= |s| then s[x:] else [s]
 }
 
-method m_method_4(p_m_method_4_1: char, p_m_method_4_2: char, p_m_method_4_3: char, p_m_method_4_4: char) returns (ret_1: map<bool, bool>)
-	requires ((p_m_method_4_2 == 'j') && (p_m_method_4_1 == 'j') && (p_m_method_4_4 == 'g') && (p_m_method_4_3 == 'j'));
-	ensures (((p_m_method_4_2 == 'j') && (p_m_method_4_1 == 'j') && (p_m_method_4_4 == 'g') && (p_m_method_4_3 == 'j')) ==> ((ret_1 == map[false := false, true := true])));
-{
-	print "p_m_method_4_4", " ", (p_m_method_4_4 == 'g'), " ", "p_m_method_4_1", " ", (p_m_method_4_1 == 'j'), " ", "p_m_method_4_3", " ", (p_m_method_4_3 == 'j'), " ", "p_m_method_4_2", " ", (p_m_method_4_2 == 'j'), "\n";
-	return (map[true := true, false := false] - {});
+function safeSeqSlice2<T> (s : seq<T>, x : int, y: int) : seq<seq<T>> {
+  if 0 <= x && 0 <= y && x + y <= |s| then s[x:y] else [s]
 }
 
-method m_method_3(p_m_method_3_1: map<bool, bool>, p_m_method_3_2: int, p_m_method_3_3: char) returns (ret_1: DT_1<real, bool>)
-	requires ((p_m_method_3_1 == map[false := false, true := true]) && (p_m_method_3_3 == 'j') && (p_m_method_3_2 == 21));
-	ensures (((p_m_method_3_1 == map[false := false, true := true]) && (p_m_method_3_3 == 'j') && (p_m_method_3_2 == 21)) ==> ((ret_1.DT_1_1? && ((ret_1 == DT_1_1)))));
-{
-	var v_seq_6: seq<char> := ['f', 'r', 'd'];
-	var v_seq_7: seq<char> := v_seq_6;
-	var v_int_13: int := 23;
-	var v_int_14: int := safe_index_seq(v_seq_7, v_int_13);
-	var v_int_15: int := v_int_14;
-	var v_seq_8: seq<char> := (if ((|v_seq_6| > 0)) then (v_seq_6[v_int_15 := 'W']) else (v_seq_6));
-	var v_map_3: map<char, int> := map['u' := 3, 'm' := 11];
-	var v_char_4: char := 'h';
-	var v_int_16: int := (if ((v_char_4 in v_map_3)) then (v_map_3[v_char_4]) else (9));
-	var v_seq_37: seq<char> := v_seq_8;
-	var v_int_53: int := v_int_16;
-	var v_int_54: int := safe_index_seq(v_seq_37, v_int_53);
-	v_int_16 := v_int_54;
-	var v_bool_int_3: (bool, int) := (false, 20);
-	var v_bool_int_4: (bool, int) := v_bool_int_3;
-	var v_DT_1_2_3: DT_1<bool, bool> := DT_1_2;
-	var v_DT_1_2_4: DT_1<bool, bool> := v_DT_1_2_3;
-	var v_char_5: char := m_method_2(v_bool_int_4, v_DT_1_2_4);
-	var v_map_4: map<char, char> := (map['e' := 'S', 'j' := 'z'] + map['J' := 'C', 'z' := 'X']);
-	var v_bool_int_5: (bool, int) := (true, 27);
-	var v_bool_int_6: (bool, int) := v_bool_int_5;
-	var v_DT_1_2_5: DT_1<bool, bool> := DT_1_2;
-	var v_DT_1_2_6: DT_1<bool, bool> := v_DT_1_2_5;
-	var v_char_6: char := m_method_2(v_bool_int_6, v_DT_1_2_6);
-	var v_char_7: char := v_char_6;
-	var v_seq_9: seq<char> := ['v', 'a', 'l', 'v'];
-	var v_int_17: int := 12;
-	v_char_5, v_char_7, v_char_6, v_char_4 := (if ((|v_seq_8| > 0)) then (v_seq_8[v_int_16]) else (v_char_5)), p_m_method_3_3, v_char_4, (if ((v_char_7 in v_map_4)) then (v_map_4[v_char_7]) else ((if ((|v_seq_9| > 0)) then (v_seq_9[v_int_17]) else ('M'))));
-	var v_DT_1_1_1: DT_1<real, bool> := DT_1_1;
-	var v_DT_1_1_2: DT_1<real, bool> := DT_1_1;
-	var v_DT_1_1_3: DT_1<real, bool> := DT_1_1;
-	var v_DT_1_1_4: DT_1<real, bool> := DT_1_1;
-	var v_seq_10: seq<DT_1<real, bool>> := ([v_DT_1_1_1, v_DT_1_1_2, v_DT_1_1_3, v_DT_1_1_4] + []);
-	var v_int_18: int := (if (true) then (9) else (15));
-	var v_seq_38: seq<DT_1<real, bool>> := v_seq_10;
-	var v_int_55: int := v_int_18;
-	var v_int_56: int := safe_index_seq(v_seq_38, v_int_55);
-	v_int_18 := v_int_56;
-	print "v_DT_1_2_6", " ", v_DT_1_2_6, " ", "v_bool_int_5.1", " ", v_bool_int_5.1, " ", "v_DT_1_2_5", " ", v_DT_1_2_5, " ", "v_bool_int_3.0", " ", v_bool_int_3.0, " ", "v_DT_1_1_3", " ", v_DT_1_1_3, " ", "v_DT_1_1_2", " ", v_DT_1_1_2, " ", "v_DT_1_2_4", " ", v_DT_1_2_4, " ", "v_bool_int_5.0", " ", v_bool_int_5.0, " ", "v_bool_int_3.1", " ", v_bool_int_3.1, " ", "v_DT_1_2_3", " ", v_DT_1_2_3, " ", "v_DT_1_1_4", " ", v_DT_1_1_4, " ", "v_int_18", " ", v_int_18, " ", "v_bool_int_3", " ", v_bool_int_3, " ", "v_seq_10", " ", v_seq_10, " ", "v_DT_1_1_1", " ", v_DT_1_1_1, " ", "p_m_method_3_2", " ", p_m_method_3_2, " ", "v_bool_int_5", " ", v_bool_int_5, " ", "p_m_method_3_1", " ", (p_m_method_3_1 == map[false := false, true := true]), " ", "v_bool_int_4", " ", v_bool_int_4, " ", "p_m_method_3_3", " ", (p_m_method_3_3 == 'j'), " ", "v_bool_int_6", " ", v_bool_int_6, " ", "v_map_4", " ", (v_map_4 == map['e' := 'S', 'j' := 'z', 'J' := 'C', 'z' := 'X']), " ", "v_char_5", " ", (v_char_5 == 'W'), " ", "v_char_4", " ", (v_char_4 == 'z'), " ", "v_char_7", " ", (v_char_7 == 'j'), " ", "v_char_6", " ", (v_char_6 == 'h'), " ", "v_map_3", " ", (v_map_3 == map['u' := 3, 'm' := 11]), " ", "v_seq_9", " ", (v_seq_9 == ['v', 'a', 'l', 'v']), " ", "v_int_13", " ", v_int_13, " ", "v_seq_8", " ", (v_seq_8 == ['W', 'r', 'd']), " ", "v_seq_7", " ", (v_seq_7 == ['f', 'r', 'd']), " ", "v_seq_6", " ", (v_seq_6 == ['f', 'r', 'd']), " ", "v_int_17", " ", v_int_17, " ", "v_int_16", " ", v_int_16, " ", "v_int_15", " ", v_int_15, " ", "v_int_14", " ", v_int_14, "\n";
-	return (if ((|v_seq_10| > 0)) then (v_seq_10[v_int_18]) else (v_DT_1_1_1));
+function safeSeqSlice3<T> (s : seq<T>, x : int, y : int, z : int) : seq<seq<T>> {
+  if 0 <= x && 0 <= y && 0 <= z && x + y + z <= |s| then s[x:y:z] else [s]
 }
 
-method safe_division(p_safe_division_1: int, p_safe_division_2: int) returns (ret_1: int)
-	ensures (p_safe_division_2 == 0 ==> ret_1 == p_safe_division_1) && (p_safe_division_2 != 0 ==> ret_1 == p_safe_division_1 / p_safe_division_2);
-{
-	return (if ((p_safe_division_2 != 0)) then ((p_safe_division_1 / p_safe_division_2)) else (p_safe_division_1));
+function safeSeqSlice3Colon<T> (s : seq<T>, x : int, y : int, z : int) : seq<seq<T>> {
+  if 0 <= x && 0 <= y && 0 <= z && x + y + z <= |s| then s[x:y:z:] else [s]
 }
 
-method safe_subsequence(p_safe_subsequence_1: seq, p_safe_subsequence_2: int, p_safe_subsequence_3: int) returns (ret_1: int, ret_2: int)
-	ensures ((|p_safe_subsequence_1| > 0) ==> ((0 <= ret_1 < |p_safe_subsequence_1|) && (0 <= ret_2 < |p_safe_subsequence_1|) && ret_1 <= ret_2)) && ((((0 <= p_safe_subsequence_2 < |p_safe_subsequence_1|) ==> (ret_1 == p_safe_subsequence_2)) && ((0 > p_safe_subsequence_2 || p_safe_subsequence_2 >= |p_safe_subsequence_1|) ==> (ret_1 == 0)) && ((0 <= p_safe_subsequence_3 < |p_safe_subsequence_1|) ==> (ret_2 == p_safe_subsequence_3)) && ((0 > p_safe_subsequence_3 || p_safe_subsequence_3 >= |p_safe_subsequence_1|) ==> (ret_2 == 0))) || ((((0 <= p_safe_subsequence_2 < |p_safe_subsequence_1|) ==> (ret_2 == p_safe_subsequence_2)) && ((0 > p_safe_subsequence_2 || p_safe_subsequence_2 >= |p_safe_subsequence_1|) ==> (ret_2 == 0)) && ((0 <= p_safe_subsequence_3 < |p_safe_subsequence_1|) ==> (ret_1 == p_safe_subsequence_3)) && ((0 > p_safe_subsequence_3 || p_safe_subsequence_3 >= |p_safe_subsequence_1|) ==> (ret_1 == 0)))));
+function lengthNormalize (x : int) : nat {
+  (if x < 0 then -x else x) % 50
+}
+method lift_645 (arg_649 : int)
+  returns (arg_650 : int, arg_651 : int)
+  requires (true)
+  ensures (true)
 {
-	var v_seq_1: seq := p_safe_subsequence_1;
-	var v_int_2: int := p_safe_subsequence_2;
-	var v_int_3: int := safe_index_seq(v_seq_1, v_int_2);
-	var v_int_1: int := v_int_3;
-	var v_seq_2: seq := p_safe_subsequence_1;
-	var v_int_5: int := p_safe_subsequence_3;
-	var v_int_6: int := safe_index_seq(v_seq_2, v_int_5);
-	var v_int_4: int := v_int_6;
-	if (v_int_1 <= v_int_4) {
-		return v_int_1, v_int_4;
-	} else {
-		return v_int_4, v_int_1;
-	}
+  arg_650 := -1882852884;
+  arg_651 := -1944827628;
+  {
+    var lift_653 := multiset{arg_650};
+    var lift_652 := multiset{arg_651};
+    lift_652 := lift_653;
+  }
 }
 
-method m_method_2(p_m_method_2_1: (bool, int), p_m_method_2_2: DT_1<bool, bool>) returns (ret_1: char)
-	requires ((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == false) && ((p_m_method_2_1).1 == -2)) || ((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == true) && ((p_m_method_2_1).1 == 27)) || ((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == true) && ((p_m_method_2_1).1 == 13)) || ((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == true) && ((p_m_method_2_1).1 == 24)) || ((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == false) && ((p_m_method_2_1).1 == 5)) || ((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == false) && ((p_m_method_2_1).1 == 20)) || ((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == true) && ((p_m_method_2_1).1 == 12));
-	ensures (((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == true) && ((p_m_method_2_1).1 == 13)) ==> ((ret_1 == 'j'))) && (((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == true) && ((p_m_method_2_1).1 == 12)) ==> ((ret_1 == 'j'))) && (((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == false) && ((p_m_method_2_1).1 == 20)) ==> ((ret_1 == 'j'))) && (((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == true) && ((p_m_method_2_1).1 == 27)) ==> ((ret_1 == 'j'))) && (((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == false) && ((p_m_method_2_1).1 == -2)) ==> ((ret_1 == 'j'))) && (((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == false) && ((p_m_method_2_1).1 == 5)) ==> ((ret_1 == 'j'))) && (((p_m_method_2_2.DT_1_2? && ((p_m_method_2_2 == DT_1_2))) && ((p_m_method_2_1).0 == true) && ((p_m_method_2_1).1 == 24)) ==> ((ret_1 == 'j')));
+method lift_605 (arg_608 : int, arg_609 : int)
+  returns (arg_610 : int)
+  requires (true)
+  ensures (true)
 {
-	match 26 {
-		case 0 => {
-			var v_int_9: int := 22;
-			var v_int_10: int := 13;
-			var v_int_11: int := 7;
-			while (v_int_10 < v_int_11) 
-				decreases v_int_11 - v_int_10;
-				invariant (v_int_10 <= v_int_11);
-			{
-				v_int_10 := (v_int_10 + 1);
-				return 'm';
-			}
-		}
-			case _ => {
-			print "p_m_method_2_1.0", " ", p_m_method_2_1.0, " ", "p_m_method_2_1.1", " ", p_m_method_2_1.1, " ", "p_m_method_2_1", " ", p_m_method_2_1, " ", "p_m_method_2_2", " ", p_m_method_2_2, "\n";
-			return 'j';
-		}
-		
-	}
-	
-	return 'H';
+  arg_610 := -27788400;
+  {
+    var lift_640 := '&';
+    var lift_639 := lift_640;
+    var lift_638 := true;
+    var lift_637 := 'D';
+    var lift_636 := true;
+    var lift_635 := (lift_636, lift_637, false);
+    var lift_634 := false;
+    var lift_633 := (lift_634, lift_635);
+    var lift_632 := lift_633;
+    var lift_631 := multiset{lift_632};
+    var lift_630 := false;
+    var lift_629 := ('f', lift_630, lift_630);
+    var lift_628 := (lift_629, lift_631);
+    var lift_627 := 'T';
+    var lift_626 := false;
+    var lift_625 := (lift_626, lift_627, lift_626);
+    var lift_624 := lift_625;
+    var lift_623 := (false, lift_624);
+    var lift_622 := lift_623;
+    var lift_621 := multiset{lift_622, lift_623, lift_622};
+    var lift_620 := lift_621;
+    var lift_619 := lift_620;
+    var lift_618 := true;
+    var lift_617 := lift_618;
+    var lift_616 := lift_617;
+    var lift_615 := lift_616;
+    var lift_614 := ('P', true, lift_615);
+    var lift_613 := lift_614;
+    var lift_612 := (lift_613, lift_619);
+    var lift_611 := lift_612;
+    lift_611 := lift_628;
+    lift_638 := true;
+    print arg_610, "\n";
+    print arg_610, "\n";
+    lift_639 := lift_639;
+  }
 }
 
-method m_method_1(p_m_method_1_1: DT_1<real, int>) returns (ret_1: DT_1<real, bool>, ret_2: seq<real>, ret_3: char, ret_4: int, ret_5: char)
-	requires ((p_m_method_1_1.DT_1_3? && ((p_m_method_1_1.DT_1_3_1 == 5) && (p_m_method_1_1.DT_1_3_2 == 3) && (p_m_method_1_1.DT_1_3_3 == 21) && (p_m_method_1_1.DT_1_3_4 == 15))));
-	ensures (((p_m_method_1_1.DT_1_3? && ((p_m_method_1_1.DT_1_3_1 == 5) && (p_m_method_1_1.DT_1_3_2 == 3) && (p_m_method_1_1.DT_1_3_3 == 21) && (p_m_method_1_1.DT_1_3_4 == 15)))) ==> ((ret_1.DT_1_1? && ((ret_1 == DT_1_1))) && |ret_2| == 2 && (-2.48 < ret_2[0] < -2.28) && (-13.89 < ret_2[1] < -13.69) && (ret_3 == 'g') && (ret_4 == 27) && (ret_5 == 'O')));
+method lift_563 (arg_566 : int)
+  returns (arg_567 : int)
+  requires (true)
+  ensures (true)
 {
-	var v_seq_3: seq<set<bool>> := [{true, true}, {false, true, true}, {false, true, false}];
-	var v_int_7: int := 10;
-	var v_seq_35: seq<set<bool>> := v_seq_3;
-	var v_int_49: int := v_int_7;
-	var v_int_50: int := safe_index_seq(v_seq_35, v_int_49);
-	v_int_7 := v_int_50;
-	var v_map_1: map<int, set<bool>> := map[-12 := {false}, 22 := {true}, 23 := {true, false, false, true}, 28 := {true, true, false}];
-	var v_int_8: int := 8;
-	var v_real_real_bool_1: (real, real, bool) := (1.50, 23.93, true);
-	var v_real_real_bool_2: (real, real, bool) := (12.02, -22.91, false);
-	var v_real_real_bool_3: (real, real, bool) := (0.84, 28.97, true);
-	var v_map_2: map<char, set<bool>> := map['O' := {false, false}, 'T' := {false, true, false, false}, 'P' := {false, false, true}, 'V' := {true, true, false, true}]['o' := {false, false}];
-	var v_bool_int_1: (bool, int) := (true, 24);
-	var v_bool_int_2: (bool, int) := v_bool_int_1;
-	var v_DT_1_2_1: DT_1<bool, bool> := DT_1_2;
-	var v_DT_1_2_2: DT_1<bool, bool> := v_DT_1_2_1;
-	var v_char_1: char := m_method_2(v_bool_int_2, v_DT_1_2_2);
-	var v_char_2: char := v_char_1;
-	var v_seq_4: seq<set<bool>> := [{false}, {true, true}, {true, false, true, true}, {}];
-	var v_int_12: int := 27;
-	var v_seq_36: seq<set<bool>> := v_seq_4;
-	var v_int_51: int := v_int_12;
-	var v_int_52: int := safe_index_seq(v_seq_36, v_int_51);
-	v_int_12 := v_int_52;
-	var v_seq_5: seq<set<bool>>, v_char_3: char := [((if ((|v_seq_3| > 0)) then (v_seq_3[v_int_7]) else ({})) + (if ((v_int_8 in v_map_1)) then (v_map_1[v_int_8]) else ({}))), ({true} - (map[true := multiset{v_real_real_bool_1, v_real_real_bool_2}, false := multiset{v_real_real_bool_3}]).Keys), (if ((v_char_2 in v_map_2)) then (v_map_2[v_char_2]) else ((if ((|v_seq_4| > 0)) then (v_seq_4[v_int_12]) else ({false, true}))))], v_char_1;
-	var v_char_12: char := v_char_3;
-	var v_bool_int_7: (bool, int) := (false, -2);
-	var v_bool_int_8: (bool, int) := v_bool_int_7;
-	var v_DT_1_2_7: DT_1<bool, bool> := DT_1_2;
-	var v_DT_1_2_8: DT_1<bool, bool> := v_DT_1_2_7;
-	var v_char_8: char := m_method_2(v_bool_int_8, v_DT_1_2_8);
-	var v_char_13: char := v_char_8;
-	var v_char_14: char := v_char_2;
-	var v_char_9: char := 'm';
-	var v_char_10: char := 'O';
-	var v_char_11: char := m_method_5(v_char_9, v_char_10);
-	var v_char_15: char := v_char_11;
-	var v_map_5: map<bool, bool> := m_method_4(v_char_12, v_char_13, v_char_14, v_char_15);
-	var v_map_6: map<bool, bool> := v_map_5;
-	var v_array_1: array<char> := new char[3];
-	v_array_1[0] := 'm';
-	v_array_1[1] := 'p';
-	v_array_1[2] := 'E';
-	var v_seq_11: seq<int> := [];
-	var v_int_19: int := 21;
-	var v_int_20: int := (v_array_1.Length * (if ((|v_seq_11| > 0)) then (v_seq_11[v_int_19]) else (7)));
-	var v_char_16: char := (match 'D' {
-		case 't' => v_char_14
-		case _ => v_char_12
-	});
-	var v_DT_1_1_5: DT_1<real, bool> := m_method_3(v_map_6, v_int_20, v_char_16);
-	var v_char_19: char := v_char_14;
-	var v_bool_int_9: (bool, int) := (false, 5);
-	var v_bool_int_10: (bool, int) := v_bool_int_9;
-	var v_DT_1_2_9: DT_1<bool, bool> := DT_1_2;
-	var v_DT_1_2_10: DT_1<bool, bool> := v_DT_1_2_9;
-	var v_char_17: char := m_method_2(v_bool_int_10, v_DT_1_2_10);
-	var v_char_20: char := v_char_17;
-	var v_bool_int_11: (bool, int) := (true, 12);
-	var v_bool_int_12: (bool, int) := v_bool_int_11;
-	var v_DT_1_2_11: DT_1<bool, bool> := DT_1_2;
-	var v_DT_1_2_12: DT_1<bool, bool> := v_DT_1_2_11;
-	var v_char_18: char := m_method_2(v_bool_int_12, v_DT_1_2_12);
-	var v_char_21: char := v_char_18;
-	var v_seq_12: seq<seq<real>> := m_method_6(v_char_19, v_char_20, v_char_21);
-	var v_seq_13: seq<seq<real>> := v_seq_12;
-	var v_int_21: int := v_int_7;
-	var v_seq_15: seq<real> := ([-21.58] + []);
-	var v_seq_14: seq<int> := [26, 7];
-	var v_int_22: int := 26;
-	var v_map_7: map<char, seq<int>> := map['d' := [5, 26, 0, -9]];
-	var v_char_22: char := 'I';
-	var v_seq_16: seq<seq<int>> := [[10, 8, 13, 13], [5, 13], [28, 17, 4, 4], [1]];
-	var v_int_23: int := 17;
-	var v_seq_17: seq<int> := (if ((if (true) then (true) else (false))) then ((if ((v_char_22 in v_map_7)) then (v_map_7[v_char_22]) else ([27, 26]))) else ((if ((|v_seq_16| > 0)) then (v_seq_16[v_int_23]) else ([]))));
-	var v_int_24: int := v_int_12;
-	var v_seq_18: seq<real> := [14.89, 27.20, 29.69];
-	var v_int_25: int := 12;
-	var v_real_real_bool_4: (real, real, bool) := (0.84, 28.97, true);
-	var v_real_real_bool_5: (real, real, bool) := (12.02, -22.91, false);
-	var v_real_real_bool_6: (real, real, bool) := (1.50, 23.93, true);
-	print "v_DT_1_2_8", " ", v_DT_1_2_8, " ", "v_DT_1_2_7", " ", v_DT_1_2_7, " ", "v_DT_1_2_2", " ", v_DT_1_2_2, " ", "v_DT_1_2_1", " ", v_DT_1_2_1, " ", "v_DT_1_2_9", " ", v_DT_1_2_9, " ", "v_real_real_bool_1.1", " ", (v_real_real_bool_1.1 == 23.93), " ", "v_real_real_bool_1.2", " ", v_real_real_bool_1.2, " ", "v_real_real_bool_3.0", " ", (v_real_real_bool_3.0 == 0.84), " ", "v_real_real_bool_3.1", " ", (v_real_real_bool_3.1 == 28.97), " ", "v_real_real_bool_3.2", " ", v_real_real_bool_3.2, " ", "v_array_1[2]", " ", (v_array_1[2] == 'E'), " ", "p_m_method_1_1.DT_1_3_1", " ", p_m_method_1_1.DT_1_3_1, " ", "p_m_method_1_1.DT_1_3_2", " ", p_m_method_1_1.DT_1_3_2, " ", "p_m_method_1_1.DT_1_3_3", " ", p_m_method_1_1.DT_1_3_3, " ", "p_m_method_1_1.DT_1_3_4", " ", p_m_method_1_1.DT_1_3_4, " ", "v_real_real_bool_1.0", " ", (v_real_real_bool_1.0 == 1.50), " ", "v_real_real_bool_3", " ", (v_real_real_bool_3 == v_real_real_bool_4), " ", "v_real_real_bool_2", " ", (v_real_real_bool_2 == v_real_real_bool_5), " ", "v_real_real_bool_1", " ", (v_real_real_bool_1 == v_real_real_bool_6), " ", "v_char_22", " ", (v_char_22 == 'I'), " ", "v_DT_1_2_12", " ", v_DT_1_2_12, " ", "v_DT_1_2_11", " ", v_DT_1_2_11, " ", "v_DT_1_2_10", " ", v_DT_1_2_10, " ", "v_bool_int_9.1", " ", v_bool_int_9.1, " ", "v_bool_int_7.0", " ", v_bool_int_7.0, " ", "v_char_18", " ", (v_char_18 == 'j'), " ", "v_char_17", " ", (v_char_17 == 'j'), " ", "v_char_16", " ", (v_char_16 == 'j'), " ", "v_bool_int_9.0", " ", v_bool_int_9.0, " ", "v_bool_int_7.1", " ", v_bool_int_7.1, " ", "v_char_15", " ", (v_char_15 == 'g'), " ", "v_char_14", " ", (v_char_14 == 'j'), " ", "v_bool_int_1.1", " ", v_bool_int_1.1, " ", "v_char_13", " ", (v_char_13 == 'j'), " ", "v_char_12", " ", (v_char_12 == 'j'), " ", "v_DT_1_1_5", " ", v_DT_1_1_5, " ", "v_char_11", " ", (v_char_11 == 'g'), " ", "v_bool_int_1.0", " ", v_bool_int_1.0, " ", "v_int_19", " ", v_int_19, " ", "v_seq_18", " ", (v_seq_18 == [14.89, 27.20, 29.69]), " ", "v_char_19", " ", (v_char_19 == 'j'), " ", "v_real_real_bool_2.0", " ", (v_real_real_bool_2.0 == 12.02), " ", "v_bool_int_1", " ", v_bool_int_1, " ", "v_seq_14", " ", v_seq_14, " ", "v_int_24", " ", v_int_24, " ", "v_real_real_bool_2.1", " ", (v_real_real_bool_2.1 == -22.91), " ", "v_seq_15", " ", (v_seq_15 == [-21.58]), " ", "v_int_23", " ", v_int_23, " ", "v_real_real_bool_2.2", " ", v_real_real_bool_2.2, " ", "v_int_22", " ", v_int_22, " ", "v_seq_16", " ", v_seq_16, " ", "p_m_method_1_1", " ", p_m_method_1_1, " ", "v_bool_int_2", " ", v_bool_int_2, " ", "v_int_21", " ", v_int_21, " ", "v_seq_17", " ", v_seq_17, " ", "v_seq_11", " ", v_seq_11, " ", "v_array_1", " ", (v_array_1 == v_array_1), " ", "v_seq_12", " ", (v_seq_12 == [[-2.38, -13.79], [5.84], [-3.60], []]), " ", "v_seq_13", " ", (v_seq_13 == [[-2.38, -13.79], [5.84], [-3.60], []]), " ", "v_int_25", " ", v_int_25, " ", "v_bool_int_9", " ", v_bool_int_9, " ", "v_char_21", " ", (v_char_21 == 'j'), " ", "v_bool_int_8", " ", v_bool_int_8, " ", "v_char_20", " ", (v_char_20 == 'j'), " ", "v_bool_int_10", " ", v_bool_int_10, " ", "v_array_1[0]", " ", (v_array_1[0] == 'm'), " ", "v_int_20", " ", v_int_20, " ", "v_bool_int_12", " ", v_bool_int_12, " ", "v_bool_int_11", " ", v_bool_int_11, " ", "v_bool_int_7", " ", v_bool_int_7, " ", "v_char_1", " ", (v_char_1 == 'j'), " ", "v_map_5", " ", (v_map_5 == map[false := false, true := true]), " ", "v_char_3", " ", (v_char_3 == 'j'), " ", "v_map_7", " ", (v_map_7 == map['d' := [5, 26, 0, -9]]), " ", "v_char_2", " ", (v_char_2 == 'j'), " ", "v_map_6", " ", (v_map_6 == map[false := false, true := true]), " ", "v_int_8", " ", v_int_8, " ", "v_char_9", " ", (v_char_9 == 'm'), " ", "v_bool_int_11.1", " ", v_bool_int_11.1, " ", "v_int_7", " ", v_int_7, " ", "v_char_8", " ", (v_char_8 == 'j'), " ", "v_bool_int_11.0", " ", v_bool_int_11.0, " ", "v_map_1", " ", (v_map_1 == map[22 := {true}, 23 := {false, true}, -12 := {false}, 28 := {false, true}]), " ", "v_map_2", " ", (v_map_2 == map['P' := {false, true}, 'T' := {false, true}, 'V' := {false, true}, 'O' := {false}, 'o' := {false}]), " ", "v_int_12", " ", v_int_12, " ", "v_seq_5", " ", (v_seq_5 == [{true}, {}, {false}]), " ", "v_seq_4", " ", (v_seq_4 == [{false}, {true}, {false, true}, {}]), " ", "v_seq_3", " ", (v_seq_3 == [{true}, {false, true}, {false, true}]), " ", "v_char_10", " ", (v_char_10 == 'O'), " ", "v_array_1[1]", " ", (v_array_1[1] == 'p'), "\n";
-	return v_DT_1_1_5, (if ((|v_seq_13| > 0)) then (v_seq_13[v_int_21]) else ((if ((|v_seq_15| > 0)) then (v_seq_15[(if ((|v_seq_14| > 0)) then (v_seq_14[v_int_22]) else (22))..(if (true) then (28) else (1))]) else (v_seq_15)))), v_char_11, (if ((|v_seq_17| > 0)) then (v_seq_17[v_int_24]) else (((if ((|v_seq_18| > 0)) then (v_seq_18[v_int_25]) else (-3.62))).Floor)), (if (v_real_real_bool_3.2) then (v_char_10) else (v_array_1[0]));
+  arg_567 := -1989868219;
+  {
+    var lift_591 := '&';
+    var lift_590 := 'T';
+    var lift_589 := 'G';
+    var lift_588 := {'E', lift_589, lift_590, lift_591, lift_590};
+    var lift_587 := lift_588;
+    var lift_586 := multiset{lift_587, lift_587, lift_587, lift_588, lift_587};
+    var lift_585 := lift_586;
+    var lift_584 := lift_585;
+    var lift_583 := '?';
+    var lift_582 := lift_583;
+    var lift_581 := {lift_582, lift_583};
+    var lift_580 := lift_581;
+    var lift_579 := 'q';
+    var lift_578 := lift_579;
+    var lift_577 := 'i';
+    var lift_576 := {lift_577, 'z', 'r'};
+    var lift_575 := multiset{
+      lift_576,
+      {lift_578, lift_578, lift_577},
+      lift_576,
+      lift_580,
+      lift_581
+    };
+    var lift_574 := ();
+    var lift_573 := arg_567;
+    var lift_572 := [lift_573];
+    var lift_571 := {arg_567, arg_567, -67099989, arg_567, arg_567};
+    var lift_570 := lift_571;
+    var lift_569 := [2068697129, -200420204, arg_566, arg_566, 2116395930];
+    var lift_568 := (lift_569, {arg_567}, lift_569);
+    lift_568 := (lift_569, lift_570, lift_572);
+    lift_574 := lift_574;
+    lift_575 := lift_584;
+    print lift_573, "\n";
+  }
 }
 
-method Main() returns ()
+function lift_517 (
+  arg_519 : multiset<()>,
+  arg_520 : char,
+  arg_521 : (char, bool),
+  arg_522 : (int, bool, bool)
+) : multiset<string>
 {
-	var v_char_26: char := 'I';
-	var v_seq_19: seq<DT_1<real, int>> := m_method_7(v_char_26);
-	var v_seq_20: seq<DT_1<real, int>> := v_seq_19;
-	var v_array_2: array<char> := new char[5] ['C', 'Y', 'F', 'P', 'M'];
-	var v_int_29: int := v_array_2.Length;
-	var v_DT_1_3_2: DT_1<real, int> := DT_1_3(25, 24, 17, 19);
-	var v_DT_1_3_3: DT_1<real, int> := DT_1_3(12, -16, -15, 2);
-	var v_seq_24: seq<char> := ['K', 'm', 'd'];
-	var v_int_33: int := 13;
-	var v_seq_31: seq<char> := v_seq_24;
-	var v_int_41: int := v_int_33;
-	var v_int_42: int := safe_index_seq(v_seq_31, v_int_41);
-	v_int_33 := v_int_42;
-	var v_char_32: char := (if ((|v_seq_24| > 0)) then (v_seq_24[v_int_33]) else ('V'));
-	var v_seq_25: seq<char> := ['X', 'v', 'a', 'T'];
-	var v_int_34: int := -5;
-	var v_seq_32: seq<char> := v_seq_25;
-	var v_int_43: int := v_int_34;
-	var v_int_44: int := safe_index_seq(v_seq_32, v_int_43);
-	v_int_34 := v_int_44;
-	var v_char_33: char := (if ((|v_seq_25| > 0)) then (v_seq_25[v_int_34]) else ('o'));
-	var v_bool_int_13: (bool, int) := (true, 13);
-	var v_bool_int_14: (bool, int) := v_bool_int_13;
-	var v_DT_1_2_13: DT_1<bool, bool> := DT_1_2;
-	var v_DT_1_2_14: DT_1<bool, bool> := v_DT_1_2_13;
-	var v_char_30: char := m_method_2(v_bool_int_14, v_DT_1_2_14);
-	var v_char_34: char := v_char_30;
-	var v_map_8: map<char, char> := map['f' := 'X', 'g' := 'Q', 'i' := 'i', 't' := 'm', 'j' := 'u'];
-	var v_char_31: char := 'e';
-	var v_char_35: char := (if ((v_char_31 in v_map_8)) then (v_map_8[v_char_31]) else ('n'));
-	var v_DT_1_3_5: DT_1<real, int> := m_method_8(v_char_32, v_char_33, v_char_34, v_char_35);
-	var v_DT_1_3_6: DT_1<real, int> := DT_1_3(-10, 11, 24, 6);
-	var v_DT_1_3_7: DT_1<real, int> := DT_1_3(17, 25, 0, 5);
-	var v_DT_1_3_8: DT_1<real, int> := DT_1_3(18, 15, 14, 15);
-	var v_seq_26: seq<DT_1<real, int>> := [v_DT_1_3_6, v_DT_1_3_7, v_DT_1_3_8];
-	var v_seq_27: seq<DT_1<real, int>> := v_seq_26;
-	var v_int_35: int := 10;
-	var v_int_36: int := safe_index_seq(v_seq_27, v_int_35);
-	var v_int_37: int := v_int_36;
-	var v_DT_1_3_9: DT_1<real, int> := DT_1_3(5, 3, 21, 15);
-	var v_seq_28: seq<DT_1<real, int>> := (if ((|v_seq_26| > 0)) then (v_seq_26[v_int_37 := v_DT_1_3_9]) else (v_seq_26));
-	var v_int_38: int := (if (true) then (29) else (9));
-	var v_seq_34: seq<DT_1<real, int>> := v_seq_28;
-	var v_int_47: int := v_int_38;
-	var v_int_48: int := safe_index_seq(v_seq_34, v_int_47);
-	v_int_38 := v_int_48;
-	var v_DT_1_3_10: DT_1<real, int> := DT_1_3(17, 25, -26, 16);
-	var v_DT_1_3_11: DT_1<real, int> := DT_1_3(29, 29, 29, 3);
-	var v_DT_1_3_12: DT_1<real, int> := DT_1_3(29, 17, 1, 21);
-	var v_DT_1_3_13: DT_1<real, int> := DT_1_3(20, 17, 4, 12);
-	var v_seq_29: seq<DT_1<real, int>> := [v_DT_1_3_10, v_DT_1_3_11, v_DT_1_3_12, v_DT_1_3_13];
-	var v_int_39: int := 21;
-	var v_DT_1_3_14: DT_1<real, int> := DT_1_3(8, 14, -17, 15);
-	var v_DT_1_3_15: DT_1<real, int> := (match 'B' {
-		case 'z' => (if ((|v_seq_20| > 0)) then (v_seq_20[v_int_29]) else ((if (true) then (v_DT_1_3_2) else (v_DT_1_3_3))))
-		case 'L' => v_DT_1_3_5
-		case _ => (if ((|v_seq_28| > 0)) then (v_seq_28[v_int_38]) else ((if ((|v_seq_29| > 0)) then (v_seq_29[v_int_39]) else (v_DT_1_3_14))))
-	});
-	var v_DT_1_1_6: DT_1<real, bool>, v_seq_30: seq<real>, v_char_36: char, v_int_40: int, v_char_37: char := m_method_1(v_DT_1_3_15);
-	v_DT_1_1_6, v_seq_30, v_char_36, v_int_40, v_char_37 := v_DT_1_1_6, v_seq_30, v_char_36, v_int_40, v_char_37;
-	print "v_DT_1_1_6", " ", v_DT_1_1_6, " ", "v_char_37", " ", (v_char_37 == 'O'), " ", "v_char_36", " ", (v_char_36 == 'g'), " ", "v_DT_1_3_15", " ", v_DT_1_3_15, " ", "v_seq_30", " ", (v_seq_30 == [-2.38, -13.79]), " ", "v_int_40", " ", v_int_40, "\n";
+  var lift_523 := (var tmpData : multiset<string> := multiset{}; tmpData);
+  lift_523
 }
+
+method lift_468 ()
+  returns (arg_472 : int, arg_473 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_472 := 957337587;
+  arg_473 := 160402250;
+  {
+    print arg_473, "\n";
+  }
+}
+
+function lift_407 (
+  arg_409 : (char, char),
+  arg_410 : multiset<()>
+) : ((), multiset<(multiset<char>, (char, char))>, set<()>)
+{
+  var lift_413 := (var tmpData : set<()> := {}; tmpData);
+  var lift_412 := (var tmpData : multiset<(multiset<char>, (char, char))> := multiset{}; tmpData);
+  var lift_411 := ();
+  (lift_411, lift_412, lift_413)
+}
+
+method lift_349 ()
+  returns (arg_353 : int, arg_354 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_353 := 1858899402;
+  arg_354 := 1270089761;
+  {
+    var lift_360 := 'X';
+    var lift_359 := lift_360;
+    var lift_358 := lift_359;
+    var lift_357 := lift_358;
+    var lift_356 := 'c';
+    var lift_355 := multiset{lift_356, lift_357, lift_357, 'd'};
+    lift_355 := lift_355;
+  }
+}
+
+method lift_308 ()
+  returns (arg_311 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_311 := 228948369;
+  {
+    var lift_319 := false;
+    var lift_318 := lift_319;
+    var lift_317 := (arg_311, lift_318);
+    var lift_316 := lift_317;
+    var lift_315 := true;
+    var lift_314 := (14221765, lift_315);
+    var lift_313 := 688949316;
+    var lift_312 := 1384591253;
+    print arg_311, "\n";
+    lift_312 := lift_312;
+    print lift_313, "\n";
+    lift_314 := lift_316;
+  }
+}
+
+method lift_281 (arg_285 : int)
+  returns (arg_286 : int, arg_287 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_286 := 558287847;
+  arg_287 := 1658479750;
+  {
+    var lift_306 := '_';
+    var lift_305 := 'Y';
+    var lift_304 := multiset{lift_305, lift_306, lift_306, lift_306, lift_306};
+    var lift_303 := lift_304;
+    var lift_302 := 'z';
+    var lift_301 := (arg_286, arg_286, true);
+    var lift_300 := ((arg_286, arg_287, 'N'), lift_301, lift_302);
+    var lift_299 := 'O';
+    var lift_298 := false;
+    var lift_297 := lift_298;
+    var lift_296 := (arg_287, arg_286, lift_297);
+    var lift_295 := 'T';
+    var lift_294 := lift_295;
+    var lift_293 := ((arg_286, 136646028, lift_294), lift_296, lift_299);
+    var lift_292 := "Athn%tz>:R@z\"-U:;vB&mlKImvh^y=x<_@<";
+    var lift_291 := '<';
+    var lift_290 := 'k';
+    var lift_289 := [lift_290, lift_291, 'j'];
+    var lift_288 := (56727590, 'F', lift_289);
+    lift_288 := (arg_285, lift_291, lift_292);
+    lift_293 := lift_300;
+    lift_303 := lift_304;
+  }
+}
+
+method lift_248 (arg_251 : int)
+  returns (arg_252 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_252 := -2045651301;
+  {
+    var lift_264 := ();
+    var lift_263 := ();
+    var lift_262 := {lift_263, lift_263, lift_264};
+    var lift_261 := lift_262;
+    var lift_260 := '$';
+    var lift_259 := true;
+    var lift_258 := lift_259;
+    var lift_257 := lift_258;
+    var lift_256 := (lift_257, lift_260, arg_251);
+    var lift_255 := ('d', arg_251);
+    var lift_254 := (lift_255, lift_256);
+    var lift_253 := ();
+    lift_253 := lift_253;
+    print arg_252, "\n";
+    lift_254 := lift_254;
+    lift_261 := lift_261;
+  }
+}
+
+method lift_235 (arg_238 : int, arg_239 : int)
+  returns (arg_240 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_240 := -1830979060;
+  {
+    var lift_244 := 'G';
+    var lift_243 := 'F';
+    var lift_242 := arg_239;
+    var lift_241 := -881438665;
+    print lift_241, "\n";
+    print lift_242, "\n";
+    print lift_242, "\n";
+    lift_243 := lift_244;
+  }
+}
+
+method lift_149 (arg_152 : int)
+  returns (arg_153 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_153 := 615938016;
+  {
+    var lift_154 := ();
+    lift_154 := lift_154;
+    print 1086944362, "\n";
+  }
+}
+
+method lift_141 ()
+  returns (arg_144 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_144 := 1044476650;
+  {
+    var lift_147 := (var tmpData : multiset<seq<char>> := multiset{}; tmpData);
+    var lift_146 := arg_144;
+    var lift_145 := lift_146;
+    lift_145 := lift_146;
+    print lift_146, "\n";
+    print arg_144, "\n";
+    lift_147 := lift_147;
+    print arg_144, "\n";
+  }
+}
+
+method lift_104 (arg_108 : int, arg_109 : int)
+  returns (arg_110 : int, arg_111 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_110 := -1515326527;
+  arg_111 := -1175645455;
+  {
+    var lift_136 := 'e';
+    var lift_135 := lift_136;
+    var lift_134 := (lift_135, 'M');
+    var lift_133 := ();
+    var lift_132 := '-';
+    var lift_131 := lift_132;
+    var lift_130 := multiset{lift_131, '_', 'W', lift_131, lift_132};
+    var lift_129 := (lift_130, lift_133, lift_134);
+    var lift_128 := lift_129;
+    var lift_127 := multiset{lift_128};
+    var lift_126 := true;
+    var lift_125 := false;
+    var lift_124 := '<';
+    var lift_123 := (lift_124, lift_124);
+    var lift_122 := ();
+    var lift_121 := 'l';
+    var lift_120 := lift_121;
+    var lift_119 := lift_120;
+    var lift_118 := multiset{lift_119, 't', lift_121, lift_119};
+    var lift_117 := lift_118;
+    var lift_116 := (lift_117, lift_122, lift_123);
+    var lift_115 := multiset{lift_116};
+    var lift_114 := true;
+    var lift_113 := [lift_114, lift_114];
+    var lift_112 := (lift_113, lift_115, lift_125);
+    lift_112 := ([lift_126, lift_114, lift_126], lift_127, lift_126);
+    print arg_111, "\n";
+    print -1592363897, "\n";
+  }
+}
+
+method lift_56 ()
+  returns (arg_60 : int, arg_61 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_60 := -1724492823;
+  arg_61 := 948084177;
+  {
+    var lift_63 := ();
+    var lift_62 := ();
+    print arg_60, "\n";
+    lift_62 := lift_63;
+  }
+}
+
+method lift_1 (arg_5 : int, arg_6 : int, arg_7 : int)
+  returns (arg_8 : int, arg_9 : int)
+  requires (true)
+  ensures (true)
+{
+  arg_8 := 1329751087;
+  arg_9 := 1601057590;
+  {
+    var lift_16 := (true, arg_9);
+    var lift_15 := false;
+    var lift_14 := (lift_15, arg_7);
+    var lift_13 := ((), arg_5);
+    var lift_12 := ();
+    var lift_11 := lift_12;
+    var lift_10 := (lift_11, arg_5);
+    lift_10 := lift_13;
+    print arg_7, "\n";
+    lift_14 := lift_16;
+  }
+}
+
+method Main () {
+  var lift_664 := ();
+  var lift_663 := lift_664;
+  var lift_662 := multiset{lift_663, (), lift_664, (), lift_663};
+  var lift_661 := (var tmpData : set<bool> := {}; tmpData);
+  var lift_660 := (lift_661, lift_662);
+  var lift_657 := ();
+  var lift_654 := '@';
+  var lift_602 := -941803781;
+  var lift_600 := false;
+  var lift_599 := lift_600;
+  var lift_598 := -546443123;
+  var lift_597 := lift_598;
+  var lift_596 := (lift_597, lift_599);
+  var lift_595 := 'n';
+  var lift_594 := (
+    lift_595,
+    (var tmpData : seq<bool> := []; tmpData),
+    lift_596
+  );
+  var lift_593 := lift_594;
+  var lift_561 := 'C';
+  var lift_560 := lift_561;
+  var lift_559 := multiset{lift_560, lift_561};
+  var lift_558 := lift_559;
+  var lift_557 := 'E';
+  var lift_556 := 'C';
+  var lift_555 := [
+    multiset{lift_556, lift_557, lift_556, lift_557, lift_556},
+    lift_558,
+    multiset{lift_561, lift_556, lift_561, lift_561},
+    lift_559
+  ];
+  var lift_553 := 'o';
+  var lift_552 := false;
+  var lift_551 := (lift_552, lift_553);
+  var lift_550 := true;
+  var lift_549 := true;
+  var lift_548 := [lift_549, lift_549, lift_549, lift_550];
+  var lift_547 := lift_548;
+  var lift_546 := (lift_547, lift_551);
+  var lift_544 := '^';
+  var lift_543 := false;
+  var lift_542 := lift_543;
+  var lift_541 := (lift_542, lift_544);
+  var lift_534 := true;
+  var lift_533 := (true, lift_534);
+  var lift_528 := true;
+  var lift_527 := lift_528;
+  var lift_526 := 400838686;
+  var lift_525 := lift_526;
+  var lift_524 := (lift_525, lift_527, false);
+  var lift_516 := 'X';
+  var lift_515 := lift_516;
+  var lift_514 := true;
+  var lift_513 := lift_514;
+  var lift_512 := {lift_513, lift_514, lift_513, lift_514};
+  var lift_511 := lift_512;
+  var lift_510 := (lift_511, lift_515);
+  var lift_509 := false;
+  var lift_508 := {lift_509, lift_509};
+  var lift_507 := (lift_508, 'd');
+  var lift_506 := '!';
+  var lift_505 := false;
+  var lift_504 := {lift_505};
+  var lift_503 := (lift_504, lift_506);
+  var lift_502 := '\'';
+  var lift_501 := lift_502;
+  var lift_500 := false;
+  var lift_499 := true;
+  var lift_498 := false;
+  var lift_497 := {lift_498, lift_498, lift_499, lift_500, false};
+  var lift_496 := {
+    (lift_497, lift_501),
+    lift_503,
+    lift_507,
+    lift_507,
+    lift_510
+  };
+  var lift_491 := '@';
+  var lift_490 := 'l';
+  var lift_489 := (lift_490, lift_491);
+  var lift_488 := false;
+  var lift_487 := multiset{lift_488, true};
+  var lift_486 := -690043881;
+  var lift_485 := (var tmpData : set<multiset<int>> := {}; tmpData);
+  var lift_484 := (lift_485, lift_486, (lift_487, lift_489));
+  var lift_483 := lift_484.2;
+  var lift_482 := false;
+  var lift_481 := true;
+  var lift_480 := [lift_481, false, lift_481, lift_481, lift_482];
+  var lift_479 := -1162870272;
+  var lift_478 := -1181069246;
+  var lift_477 := (lift_478, -1818502962);
+  var lift_476 := lift_477;
+  var lift_475 := (lift_476, (-937578422, lift_479, lift_480));
+  var lift_467 := 2016939266;
+  var lift_466 := lift_467;
+  var lift_465 := 'd';
+  var lift_464 := (lift_465, lift_466, lift_465);
+  var lift_462 := -1736218409;
+  var lift_461 := ('J', lift_462, 'R');
+  var lift_460 := 's';
+  var lift_459 := ((lift_460, lift_460), lift_461, lift_462);
+  var lift_458 := 1542104908;
+  var lift_457 := lift_458;
+  var lift_456 := 'T';
+  var lift_455 := (lift_456, lift_457, lift_456);
+  var lift_449 := false;
+  var lift_448 := lift_449;
+  var lift_447 := 'P';
+  var lift_446 := (lift_447, lift_448);
+  var lift_445 := false;
+  var lift_444 := ';';
+  var lift_443 := (lift_444, lift_445);
+  var lift_442 := lift_443;
+  var lift_441 := 'E';
+  var lift_440 := lift_441;
+  var lift_439 := (lift_440, true);
+  var lift_438 := {lift_439, lift_442, lift_446, lift_442};
+  var lift_437 := ();
+  var lift_436 := multiset{lift_437, lift_437, lift_437};
+  var lift_435 := '\'';
+  var lift_434 := lift_435;
+  var lift_433 := lift_434;
+  var lift_432 := (lift_433, lift_434, lift_436);
+  var lift_429 := 'u';
+  var lift_428 := ('"', lift_429);
+  var lift_427 := 59065108;
+  var lift_426 := true;
+  var lift_425 := (lift_426, '!', lift_427);
+  var lift_424 := false;
+  var lift_423 := lift_424;
+  var lift_422 := {lift_423, lift_424};
+  var lift_421 := (lift_422, lift_425);
+  var lift_420 := 'A';
+  var lift_419 := (false, lift_420, 1526380408);
+  var lift_418 := (var tmpData : set<bool> := {}; tmpData);
+  var lift_417 := (lift_418, lift_419);
+  var lift_416 := {lift_417, lift_421};
+  var lift_415 := (var tmpData : set<set<char>> := {}; tmpData);
+  var lift_414 := (lift_415, lift_416, lift_428);
+  var lift_406 := (var tmpData : set<()> := {}; tmpData);
+  var lift_405 := '*';
+  var lift_404 := '"';
+  var lift_403 := (lift_404, lift_405);
+  var lift_402 := lift_403;
+  var lift_401 := lift_402;
+  var lift_400 := '>';
+  var lift_399 := multiset{'X', lift_400};
+  var lift_398 := (lift_399, lift_401);
+  var lift_397 := ';';
+  var lift_396 := lift_397;
+  var lift_395 := (lift_396, lift_396);
+  var lift_394 := lift_395;
+  var lift_393 := 'e';
+  var lift_392 := lift_393;
+  var lift_391 := multiset{lift_392, lift_393};
+  var lift_390 := (lift_391, lift_394);
+  var lift_389 := ();
+  var lift_388 := (lift_389, multiset{lift_390, lift_390, lift_398}, lift_406);
+  var lift_387 := lift_388;
+  var lift_386 := [lift_387];
+  var lift_385 := lift_386;
+  var lift_381 := false;
+  var lift_380 := -2110998681;
+  var lift_379 := false;
+  var lift_378 := (lift_379, lift_380);
+  var lift_377 := 'L';
+  var lift_376 := (lift_377, lift_378, lift_381);
+  var lift_371 := 1882776402;
+  var lift_370 := -796876201;
+  var lift_369 := (lift_370, lift_371);
+  var lift_348 := false;
+  var lift_346 := -88701428;
+  var lift_345 := (lift_346, -1323922375, -185238549);
+  var lift_344 := 1953491336;
+  var lift_343 := lift_344;
+  var lift_342 := lift_343;
+  var lift_341 := false;
+  var lift_340 := lift_341;
+  var lift_339 := (lift_340, lift_342);
+  var lift_338 := (lift_339, lift_345);
+  var lift_335 := -820734445;
+  var lift_334 := -328421958;
+  var lift_333 := lift_334;
+  var lift_332 := (lift_333, lift_334, lift_335);
+  var lift_331 := false;
+  var lift_330 := lift_331;
+  var lift_329 := (lift_330, 1191985704);
+  var lift_328 := (lift_329, lift_332);
+  var lift_327 := -1130311173;
+  var lift_326 := lift_327;
+  var lift_325 := lift_326;
+  var lift_324 := lift_325;
+  var lift_323 := (lift_324, lift_327, -1911072083);
+  var lift_322 := lift_323;
+  var lift_276 := -2085702830;
+  var lift_275 := 2071059576;
+  var lift_274 := true;
+  var lift_273 := (lift_274, lift_275, lift_276);
+  var lift_272 := lift_273;
+  var lift_271 := 1946672460;
+  var lift_270 := true;
+  var lift_269 := (lift_270, lift_271, lift_271);
+  var lift_268 := lift_269;
+  var lift_267 := (var tmpData : seq<bool> := []; tmpData);
+  var lift_266 := (lift_267, lift_268);
+  var lift_247 := ();
+  var lift_234 := true;
+  var lift_233 := 1856566576;
+  var lift_232 := 'R';
+  var lift_231 := 321882843;
+  var lift_230 := lift_231;
+  var lift_229 := '&';
+  var lift_228 := (lift_229, lift_230);
+  var lift_227 := true;
+  var lift_226 := ('=', lift_227);
+  var lift_225 := lift_226;
+  var lift_224 := (lift_225, '$', lift_228);
+  var lift_223 := (
+    {lift_224, (lift_226, lift_229, (lift_232, lift_233))},
+    lift_227
+  );
+  var lift_222 := lift_223;
+  var lift_217 := -1875793327;
+  var lift_216 := lift_217;
+  var lift_215 := ('D', lift_216);
+  var lift_214 := lift_215;
+  var lift_212 := true;
+  var lift_211 := '~';
+  var lift_210 := (lift_211, lift_212);
+  var lift_205 := '_';
+  var lift_204 := ();
+  var lift_203 := -508619643;
+  var lift_202 := [lift_203, 1387282739, lift_203, -17411237];
+  var lift_201 := (lift_202, lift_204, lift_205);
+  var lift_200 := lift_201;
+  var lift_197 := false;
+  var lift_196 := [true, lift_197, lift_197];
+  var lift_195 := true;
+  var lift_194 := 812809443;
+  var lift_193 := (lift_194, 'I', lift_195);
+  var lift_192 := -680779301;
+  var lift_191 := '@';
+  var lift_190 := lift_191;
+  var lift_189 := ((lift_190, true, lift_192), lift_193, lift_196);
+  var lift_188 := true;
+  var lift_187 := false;
+  var lift_186 := lift_187;
+  var lift_185 := [lift_186, lift_188, lift_188];
+  var lift_184 := false;
+  var lift_183 := 'g';
+  var lift_182 := 1224244042;
+  var lift_181 := (lift_182, lift_183, lift_184);
+  var lift_180 := 1709185592;
+  var lift_179 := lift_180;
+  var lift_178 := false;
+  var lift_177 := ('U', lift_178, lift_179);
+  var lift_176 := (lift_177, lift_181, lift_185);
+  var lift_175 := {lift_176, lift_189, lift_176, lift_189};
+  var lift_174 := false;
+  var lift_173 := 'T';
+  var lift_172 := false;
+  var lift_171 := (lift_172, lift_173, lift_174);
+  var lift_170 := lift_171;
+  var lift_169 := (var tmpData : set<bool> := {}; tmpData);
+  var lift_166 := 'V';
+  var lift_165 := true;
+  var lift_164 := lift_165;
+  var lift_163 := (lift_164, lift_166, false);
+  var lift_162 := false;
+  var lift_161 := true;
+  var lift_160 := {lift_161, lift_162};
+  var lift_159 := (lift_160, (), lift_163);
+  var lift_140 := 'd';
+  var lift_139 := lift_140;
+  var lift_103 := ();
+  var lift_102 := lift_103;
+  var lift_101 := [lift_102];
+  var lift_100 := lift_101;
+  var lift_99 := lift_100;
+  var lift_98 := ();
+  var lift_97 := lift_98;
+  var lift_93 := true;
+  var lift_92 := '\'';
+  var lift_91 := 1962479111;
+  var lift_90 := (lift_91, lift_92, lift_93);
+  var lift_89 := lift_90;
+  var lift_88 := -1010478782;
+  var lift_87 := 'X';
+  var lift_86 := lift_87;
+  var lift_85 := lift_86;
+  var lift_84 := lift_85;
+  var lift_83 := lift_84;
+  var lift_82 := lift_83;
+  var lift_81 := (lift_82, true, lift_88);
+  var lift_80 := lift_81;
+  var lift_79 := true;
+  var lift_78 := true;
+  var lift_77 := [lift_78, lift_78, lift_79];
+  var lift_76 := lift_77;
+  var lift_75 := false;
+  var lift_74 := '&';
+  var lift_73 := -1224210742;
+  var lift_72 := (lift_73, lift_74, lift_75);
+  var lift_71 := -698658255;
+  var lift_70 := lift_71;
+  var lift_69 := lift_70;
+  var lift_68 := lift_69;
+  var lift_67 := true;
+  var lift_66 := ('$', lift_67, lift_68);
+  var lift_65 := (lift_66, lift_72, lift_76);
+  var lift_64 := {lift_65, lift_65, (lift_80, lift_89, [lift_67])};
+  var lift_54 := true;
+  var lift_53 := lift_54;
+  var lift_52 := lift_53;
+  var lift_51 := (var tmpData : seq<bool> := []; tmpData);
+  var lift_50 := 1132637547;
+  var lift_49 := lift_50;
+  var lift_48 := (lift_49, lift_51, lift_52);
+  var lift_46 := -1478376610;
+  var lift_45 := lift_46;
+  var lift_44 := 'S';
+  var lift_43 := (lift_44, lift_44, lift_45);
+  var lift_42 := lift_43;
+  var lift_41 := "qT&;V/\"oTSF";
+  var lift_40 := (lift_41, lift_42);
+  var lift_39 := 'H';
+  var lift_38 := {lift_39};
+  var lift_37 := false;
+  var lift_36 := -154464950;
+  var lift_35 := true;
+  var lift_34 := (lift_35, lift_36);
+  var lift_33 := (lift_34, lift_37, lift_38);
+  var lift_32 := lift_33;
+  var lift_31 := 'z';
+  var lift_30 := 'y';
+  var lift_29 := '/';
+  var lift_28 := lift_29;
+  var lift_27 := lift_28;
+  var lift_26 := multiset{
+    {lift_27, lift_28, lift_30},
+    {lift_29, lift_30, lift_27, lift_30, lift_31}
+  };
+  var lift_25 := 'B';
+  var lift_24 := lift_25;
+  var lift_23 := 1297973882;
+  var lift_22 := lift_23;
+  var lift_21 := (lift_22, [lift_24], 650674313);
+  var lift_20 := -1308768273;
+  var lift_19 := lift_20;
+  var lift_18 := {lift_19, lift_19};
+  var lift_17 := -1375036934;
+  var methoddefvar_3, methoddefvar_4 := lift_1(
+    safeSeqRef(
+      [1870629457, lift_17, 1469735523, lift_17],
+      |lift_18|,
+      lift_21.2
+    ),
+    (lift_26[lift_32.2] as int),
+    lift_40.1.2
+  );
+  {
+    var lift_265 := lift_266;
+    var lift_246 := -1589886597;
+    var lift_245 := ();
+    var lift_221 := (lift_139, lift_54);
+    var lift_220 := (lift_221, lift_24, lift_215);
+    var lift_219 := (lift_205, lift_35);
+    var lift_218 := (lift_219, '~', lift_214);
+    var lift_209 := (lift_83, lift_194);
+    var lift_168 := {lift_75, lift_37, lift_165};
+    var lift_167 := (lift_168, lift_103, lift_163);
+    var lift_158 := multiset{lift_159, lift_167, (lift_169, (), lift_170)};
+    var lift_157 := lift_158;
+    var lift_156 := (-101213419, lift_75, lift_37);
+    var lift_155 := (lift_156, lift_73, lift_157);
+    var lift_137 := {false};
+    var lift_96 := lift_97;
+    var lift_95 := [lift_96, (), lift_98, lift_96];
+    var lift_47 := lift_48;
+    if (lift_47.2) {
+      var lift_94 := lift_95;
+      var lift_55 := false;
+      lift_55 := lift_35;
+      var methoddefvar_58, methoddefvar_59 := lift_56();
+      {
+        lift_64 := (var tmpData : set<((char, bool, int), (int, char, bool), seq<bool>)> := {}; tmpData);
+        print lift_23, "\n";
+        lift_94 := lift_99;
+      }
+      var methoddefvar_106, methoddefvar_107 := lift_104(lift_46, lift_50);
+      {
+        var lift_138 := {lift_67};
+        lift_137 := lift_138;
+        print methoddefvar_3, "\n";
+        print 601396746, "\n";
+        print methoddefvar_107, "\n";
+      }
+      lift_139 := lift_29;
+    } else {
+      var lift_148 := true;
+      var methoddefvar_143 := lift_141();
+      {
+        print lift_17, "\n";
+        lift_148 := lift_78;
+        print methoddefvar_4, "\n";
+        print lift_91, "\n";
+        print lift_69, "\n";
+      }
+      var methoddefvar_151 := lift_149(lift_91);
+      {
+        print -1661855421, "\n";
+        print lift_45, "\n";
+        print lift_69, "\n";
+      }
+      lift_155 := lift_155;
+    }
+    if ((lift_64 > lift_175)) {
+      print lift_70, "\n";
+    } else {
+      var lift_208 := ((lift_25, true), lift_29, lift_209);
+      var methoddefvar_198, methoddefvar_199 := lift_56();
+      {
+        var lift_213 := lift_214;
+        var lift_207 := {
+          lift_208,
+          (lift_210, lift_83, lift_213),
+          lift_218,
+          lift_220
+        };
+        var lift_206 := (lift_207, lift_195);
+        lift_200 := lift_201;
+        lift_206 := lift_222;
+        lift_234 := false;
+        print lift_17, "\n";
+        print lift_230, "\n";
+      }
+      var methoddefvar_237 := lift_235(lift_231, lift_71);
+      {
+        print -2053163443, "\n";
+        lift_245 := lift_97;
+      }
+      {
+        lift_246 := lift_179;
+      }
+      lift_247 := lift_96;
+      var methoddefvar_250 := lift_248(lift_179);
+      {
+        var lift_278 := ":>oEBJKXJS&_H^\"$bPP!W^<=kyq!Lm";
+        var lift_277 := (lift_49, lift_41, lift_85);
+        lift_265 := (lift_267, lift_272);
+        lift_277 := (lift_45, lift_278, lift_39);
+      }
+    }
+    print |lift_168|, "\n";
+  }
+  {
+    var lift_454 := (lift_428, lift_455, lift_216);
+    var lift_431 := lift_432;
+    var lift_430 := lift_431;
+    var lift_384 := lift_385;
+    var lift_383 := safeSeqRef(lift_384, lift_19, lift_387);
+    var lift_382 := false;
+    var lift_362 := {lift_97, lift_97, lift_247, ()};
+    var lift_361 := (var tmpData : set<()> := {}; tmpData);
+    var lift_347 := [lift_188];
+    var lift_336 := lift_328;
+    var lift_321 := (lift_195, -591790159);
+    var lift_320 := {
+      (lift_34, (lift_70, lift_194, lift_233)),
+      (lift_321, lift_322),
+      lift_328,
+      lift_336,
+      lift_336
+    };
+    var lift_307 := false;
+    var lift_280 := [
+      lift_76,
+      lift_267,
+      [lift_184, lift_172],
+      lift_196,
+      lift_77
+    ];
+    var lift_279 := lift_280;
+    if (safeSeqRef(
+      safeSeqRef(lift_279, lift_20, lift_267),
+      (-2122745768, 'b', 1054912697).2,
+      (lift_161 <== lift_274)
+    )) {
+      var lift_363 := ();
+      var lift_337 := (lift_329, lift_332);
+      var methoddefvar_283, methoddefvar_284 := lift_281(lift_20);
+      {
+        lift_307 := lift_164;
+      }
+      print safeSeqRef(lift_202, lift_182, lift_179), "\n";
+      {
+        var methoddefvar_310 := lift_308();
+        {
+          lift_320 := {lift_337, lift_338};
+          lift_347 := (var tmpData : seq<bool> := []; tmpData);
+          lift_348 := lift_195;
+          print lift_49, "\n";
+          print lift_230, "\n";
+        }
+        var methoddefvar_351, methoddefvar_352 := lift_349();
+        {
+          lift_361 := lift_362;
+          print lift_73, "\n";
+          lift_363 := lift_97;
+          print lift_91, "\n";
+        }
+        {
+          var lift_364 := '/';
+          lift_364 := lift_82;
+          print lift_182, "\n";
+          print lift_70, "\n";
+        }
+        print lift_91, "\n";
+        if (lift_270) {
+          print lift_271, "\n";
+          print lift_230, "\n";
+          print lift_73, "\n";
+        } else {
+          print lift_346, "\n";
+          print lift_73, "\n";
+          print lift_88, "\n";
+        }
+      }
+    } else {
+      var lift_375 := ('!', (lift_79, -470290187), lift_93);
+      var lift_374 := ();
+      var lift_373 := ();
+      var lift_368 := multiset{(lift_91, lift_325), lift_369};
+      var lift_365 := 'a';
+      lift_365 := lift_90.1;
+      var methoddefvar_366, methoddefvar_367 := lift_349();
+      {
+        lift_368 := (var tmpData : multiset<(int, int)> := multiset{}; tmpData);
+      }
+      var methoddefvar_372 := lift_235(lift_73, lift_73);
+      {
+        lift_373 := lift_374;
+        lift_375 := lift_376;
+        print lift_179, "\n";
+        lift_382 := lift_187;
+      }
+    }
+    lift_383 := lift_407(lift_414.2, lift_430.2);
+    {
+      var lift_463 := lift_459;
+      var lift_453 := {lift_454, lift_459, lift_454, lift_463, lift_459};
+      var lift_452 := [(), lift_102, lift_204, lift_204];
+      var lift_451 := (lift_399, lift_361);
+      print lift_322.0, "\n";
+      if (lift_223.1) {
+        var lift_450 := {('-', lift_445)};
+        {
+          lift_438 := lift_450;
+          lift_451 := lift_451;
+          lift_452 := [lift_102, lift_437, (), lift_98, ()];
+        }
+      } else {
+        {
+          print 1573893499, "\n";
+          print 918974095, "\n";
+          print lift_230, "\n";
+        }
+        lift_453 := {
+          (lift_402, lift_464, lift_334),
+          (lift_394, lift_455, lift_335),
+          lift_459
+        };
+      }
+    }
+  }
+  var methoddefvar_470, methoddefvar_471 := lift_468();
+  {
+    var lift_474 := -409093381;
+    lift_474 := (multiset{[(), lift_97], [lift_389]}[lift_99] as int);
+  }
+  if ((((lift_53 || lift_270) ==> (lift_203 > lift_192)) in lift_475.1.2)) {
+    lift_483 := lift_483;
+  } else {
+    var lift_643 := {
+      [
+        {lift_449, lift_499, true},
+        lift_508,
+        {true, lift_552, lift_445, lift_162},
+        lift_508,
+        lift_160
+      ]
+    };
+    var lift_592 := lift_593;
+    var lift_545 := lift_546;
+    var lift_540 := lift_541;
+    var lift_539 := (lift_77, lift_540);
+    var lift_536 := {lift_191, lift_166, lift_392, lift_433, '|'};
+    print (lift_210.0 as int), "\n";
+    print (lift_404 as int), "\n";
+    if ((((
+      arg_492 : bool,
+      arg_493 : set<(set<bool>, char)>,
+      arg_494 : (),
+      arg_495 : int
+    ) => "$q")(lift_341, lift_496, lift_389, -1232009888) in lift_517(
+      lift_436,
+      lift_139,
+      lift_210,
+      lift_524
+    ))) {
+      var methoddefvar_529, methoddefvar_530 := lift_281(lift_346);
+      {
+        print lift_380, "\n";
+        print lift_275, "\n";
+        print lift_466, "\n";
+        print -1364505792, "\n";
+      }
+    } else {
+      var lift_642 := '|';
+      var lift_604 := [lift_76, lift_267, [lift_341], lift_547];
+      var lift_603 := [
+        lift_547,
+        lift_185,
+        [lift_37, lift_67, lift_534],
+        lift_196,
+        lift_185
+      ];
+      var lift_601 := [lift_481, lift_481, lift_549, lift_542];
+      var lift_562 := false;
+      var lift_538 := lift_539;
+      {
+        var lift_537 := false;
+        var lift_532 := (lift_380, lift_533);
+        var lift_531 := (var tmpData : seq<bool> := []; tmpData);
+        if (lift_162) {
+          lift_531 := lift_480;
+          print lift_479, "\n";
+        } else {
+          var lift_535 := {'w'};
+          lift_532 := lift_532;
+          lift_535 := lift_536;
+          lift_537 := lift_348;
+          print lift_478, "\n";
+          print 338990326, "\n";
+        }
+        print lift_233, "\n";
+        print lift_231, "\n";
+        print lift_467, "\n";
+        if (lift_227) {
+          var lift_554 := (var tmpData : seq<multiset<char>> := []; tmpData);
+          print -2067969059, "\n";
+          lift_538 := lift_545;
+          print lift_342, "\n";
+          lift_554 := lift_555;
+          print lift_324, "\n";
+        } else {
+          lift_562 := lift_513;
+          print 1398150369, "\n";
+          print lift_346, "\n";
+        }
+      }
+      var methoddefvar_565 := lift_563(lift_346);
+      {
+        lift_592 := (
+          lift_429,
+          [lift_197, false, lift_93, lift_379, lift_52],
+          (-533698480, lift_195)
+        );
+        print lift_370, "\n";
+        lift_601 := lift_267;
+        lift_602 := lift_46;
+        print lift_326, "\n";
+      }
+      lift_603 := lift_604;
+      var methoddefvar_607 := lift_605(lift_344, lift_325);
+      {
+        var lift_641 := {lift_97, lift_204, lift_437};
+        print lift_45, "\n";
+        lift_641 := {(), lift_98, ()};
+        print lift_427, "\n";
+        lift_642 := lift_429;
+      }
+    }
+    {
+      print 
+        safeSeqRef((var tmpData : seq<int> := []; tmpData), lift_370, lift_525),
+        "\n";
+      {
+        {
+          var lift_644 := (var tmpData : set<seq<set<bool>>> := {}; tmpData);
+          lift_643 := lift_644;
+          print -1158248401, "\n";
+        }
+      }
+      print |lift_496|, "\n";
+      {
+        var methoddefvar_647, methoddefvar_648 := lift_645(lift_346);
+        {
+          print lift_478, "\n";
+          print lift_231, "\n";
+        }
+        lift_654 := lift_556;
+      }
+    }
+    var methoddefvar_655, methoddefvar_656 := lift_1(
+      lift_34.1,
+      lift_269.2,
+      |lift_99|
+    );
+    {
+      lift_657 := lift_389;
+      var methoddefvar_658, methoddefvar_659 := lift_1(
+        lift_427,
+        lift_526,
+        -2024105175
+      );
+      {
+        lift_660 := (lift_160, lift_662);
+      }
+    }
+  }
+}
+
+

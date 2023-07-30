@@ -9,11 +9,10 @@ using Microsoft.Dafny.Auditor;
 
 namespace Microsoft.Dafny;
 
-
 public interface INode {
   RangeToken RangeToken { get; }
-
   IToken Tok { get; }
+  IEnumerable<Node> Children { get; }
 }
 
 public interface ICanFormat : INode {
@@ -29,7 +28,6 @@ public interface IHasDocstring : INode {
 }
 
 public abstract class Node : INode {
-
   public abstract IToken Tok { get; }
 
   /// <summary>
@@ -329,7 +327,7 @@ public abstract class TokenNode : Node {
           }
         }
 
-        Children.Iter(UpdateStartEndTokRecursive);
+        PreResolveChildren.ForEach(UpdateStartEndTokRecursive);
 
         if (FormatTokens != null) {
           foreach (var token in FormatTokens) {

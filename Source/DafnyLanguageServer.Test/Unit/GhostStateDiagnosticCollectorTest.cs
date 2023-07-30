@@ -40,16 +40,16 @@ public class GhostStateDiagnosticCollectorTest {
 
   class CollectingErrorReporter : BatchErrorReporter {
     public Dictionary<ErrorLevel, List<DafnyDiagnostic>> GetErrors() {
-      return this.AllMessages;
+      return this.AllMessagesByLevel;
     }
 
-    public CollectingErrorReporter(DafnyOptions options, DefaultModuleDefinition outerModule) : base(options, outerModule) {
+    public CollectingErrorReporter(DafnyOptions options) : base(options) {
     }
   }
 
   class DummyModuleDecl : LiteralModuleDecl {
     public DummyModuleDecl(IList<Uri> rootUris) : base(
-      new DefaultModuleDefinition(rootUris), null) {
+      new DefaultModuleDefinition(rootUris), null, Guid.NewGuid()) {
     }
     public override object Dereference() {
       return this;
@@ -61,13 +61,17 @@ public class GhostStateDiagnosticCollectorTest {
     // Builtins is null to trigger an error.
     var options = DafnyOptions.DefaultImmutableOptions;
     var rootUri = new Uri(Directory.GetCurrentDirectory());
-    var dummyModuleDecl = new DummyModuleDecl(new List<Uri>() { rootUri });
-    var reporter = new CollectingErrorReporter(options, (DefaultModuleDefinition)dummyModuleDecl.ModuleDef);
-    var program = new Dafny.Program("dummy", dummyModuleDecl, null, reporter);
+    var dummyModuleDecl = new DummyModuleDecl(new List<Uri> { rootUri });
+    var reporter = new CollectingErrorReporter(options);
+    var compilation = new CompilationData(reporter, new List<Include>(), new List<Uri>(), Sets.Empty<Uri>(),
+      Sets.Empty<Uri>());
+    var program = new Dafny.Program("dummy", dummyModuleDecl, null, reporter, compilation);
+    var source = new CancellationTokenSource();
+    source.CancelAfter(TimeSpan.FromSeconds(50));
     var ghostDiagnostics = ghostStateDiagnosticCollector.GetGhostStateDiagnostics(
       new SignatureAndCompletionTable(null!, new CompilationUnit(rootUri, program),
         null!, null!, new IntervalTree<Position, ILocalizableSymbol>(), true)
-      , CancellationToken.None);
+      , source.Token);
     Assert.Empty(ghostDiagnostics);
   }
 }

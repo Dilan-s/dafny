@@ -15,7 +15,6 @@ using System.IO;
 using System.Reflection;
 using JetBrains.Annotations;
 using Microsoft.BaseTypes;
-using Microsoft.Boogie;
 using Microsoft.CodeAnalysis.CSharp.Syntax;
 using Microsoft.Dafny.Plugins;
 
@@ -78,7 +77,7 @@ namespace Microsoft.Dafny {
         AddXConstraint(newtypeDecl.tok, "NumericType", newtypeDecl.BaseType, "newtypes must be based on some numeric type (got {0})");
         // type check the constraint, if any
         if (newtypeDecl.Var != null) {
-          Contract.Assert(object.ReferenceEquals(newtypeDecl.Var.Type, newtypeDecl.BaseType.NormalizeExpand(true)));  // follows from NewtypeDecl invariant
+          Contract.Assert(object.ReferenceEquals(newtypeDecl.Var.Type.NormalizeExpand(true), newtypeDecl.BaseType.NormalizeExpand(true)));  // follows from NewtypeDecl invariant
           Contract.Assert(newtypeDecl.Constraint != null);  // follows from NewtypeDecl invariant
 
           scope.PushMarker();
@@ -1111,15 +1110,15 @@ namespace Microsoft.Dafny {
           Contract.Assert(e.Range.Type != null);  // follows from postcondition of ResolveExpression
           ConstrainTypeExprBool(e.Range, "Precondition must be boolean (got {0})");
         }
-        foreach (var read in e.Reads) {
+        foreach (var read in e.Reads.Expressions) {
           ResolveFrameExpression(read, FrameExpressionUse.Reads, resolutionContext);
         }
         ResolveExpression(e.Term, resolutionContext);
         Contract.Assert(e.Term.Type != null);
         scope.PopMarker();
-        expr.Type = SelectAppropriateArrowType(e.tok, e.BoundVars.ConvertAll(v => v.Type), e.Body.Type, e.Reads.Count != 0, e.Range != null, SystemModuleManager);
+        expr.Type = SelectAppropriateArrowType(e.tok, e.BoundVars.ConvertAll(v => v.Type), e.Body.Type, e.Reads.Expressions.Count != 0, e.Range != null, SystemModuleManager);
       } else if (expr is WildcardExpr) {
-        expr.Type = new SetType(true, SystemModuleManager.ObjectQ());
+        expr.Type = SystemModuleManager.ObjectSetType();
       } else if (expr is StmtExpr) {
         var e = (StmtExpr)expr;
         int prevErrorCount = reporter.Count(ErrorLevel.Error);
@@ -3335,8 +3334,8 @@ namespace Microsoft.Dafny {
         } else if (formal.DefaultValue != null) {
           // Note, in the following line, "substMap" is passed in, but it hasn't been fully filled in until the
           // end of this foreach loop. Still, that's soon enough, because DefaultValueExpression won't use it
-          // until FillInDefaultValueExpressions at the end of Pass 1 of the Resolver.
-          var n = new DefaultValueExpression(callTok, formal, receiver, substMap, typeMap);
+          // until FillInDefaultValueExpressions at the end of Pass 0 of the Resolver.
+          var n = new DefaultValueExpressionType(callTok, formal, receiver, substMap, typeMap) { Type = formal.Type.Subst(typeMap) };
           allDefaultValueExpressions.Add(n);
           actuals.Add(n);
           substMap.Add(formal, n);
@@ -3996,8 +3995,8 @@ namespace Microsoft.Dafny {
             }
           }
 
-          if (s.ForallExpressions != null) {
-            foreach (Expression expr in s.ForallExpressions) {
+          if (s.EffectiveEnsuresClauses != null) {
+            foreach (Expression expr in s.EffectiveEnsuresClauses) {
               ResolveExpression(expr, resolutionContext);
             }
           }
@@ -4485,7 +4484,6 @@ namespace Microsoft.Dafny {
             }
           }
         } else {
-          bool callsConstructor = false;
           if (rr.Bindings == null) {
             ResolveType(stmt.Tok, rr.EType, resolutionContext, ResolveTypeOptionEnum.InferTypeProxies, null);
             var cl = (rr.EType as UserDefinedType)?.ResolvedClass as NonNullTypeDecl;
@@ -4533,24 +4531,9 @@ namespace Microsoft.Dafny {
                 if (methodSel.Member is Method) {
                   rr.InitCall = new CallStmt(stmt.RangeToken, new List<Expression>(), methodSel, rr.Bindings.ArgumentBindings, initCallTok);
                   ResolveCallStmt(rr.InitCall, resolutionContext, rr.EType);
-                  if (rr.InitCall.Method is Constructor) {
-                    callsConstructor = true;
-                  }
                 } else {
                   reporter.Error(MessageSource.Resolver, initCallTok, "object initialization must denote an initializing method or constructor ({0})", initCallName);
                 }
-              }
-            }
-          }
-          if (rr.EType.IsRefType) {
-            var udt = rr.EType.NormalizeExpand() as UserDefinedType;
-            if (udt != null) {
-              var cl = (ClassLikeDecl)udt.ResolvedClass;  // cast is guaranteed by the call to rr.EType.IsRefType above, together with the "rr.EType is UserDefinedType" test
-              if (!callsConstructor && !cl.IsObjectTrait && !udt.IsArrayType &&
-                  (cl is ClassDecl { HasConstructor: true } || cl.EnclosingModuleDefinition != currentClass.EnclosingModuleDefinition)) {
-                reporter.Error(MessageSource.Resolver, stmt,
-                  "when allocating an object of {1}type '{0}', one of its constructor methods must be called", cl.Name,
-                  cl is ClassDecl { HasConstructor: true } ? "" : "imported ");
               }
             }
           }
@@ -5068,7 +5051,7 @@ namespace Microsoft.Dafny {
       Contract.Requires(enclosingTypeDefinition != null);
       Contract.Requires(!lax || enclosingTypeDefinition is ICallable);
 
-      type = type.Normalize();  // we keep constraints, since subset types have their own type-parameter variance specifications; we also keep synonys, since that gives rise to better error messages
+      type = type.Normalize();  // we keep constraints, since subset types have their own type-parameter variance specifications; we also keep synonyms, since that gives rise to better error messages
       if (type is BasicType) {
         // fine
       } else if (type is MapType) {
@@ -5486,6 +5469,7 @@ namespace Microsoft.Dafny {
 
     public static Expression GetReceiver(TopLevelDeclWithMembers container, MemberDecl member, IToken token) {
       Expression receiver;
+      token = new AutoGeneratedToken(token);
       if (member.IsStatic) {
         receiver = new StaticReceiverExpr(token,
           UserDefinedType.FromTopLevelDecl(token, container, container.TypeArgs),
@@ -5622,7 +5606,7 @@ namespace Microsoft.Dafny {
         var hint0 = "(did you forget to qualify a name or declare a module import 'opened'?)";
         var hint1 = " (note that names in outer modules are not visible in contained modules)";
         var hint2 = "";
-        if (Options.Get(CommonOptionBag.GeneralTraits) && expr.Name.EndsWith("?")) {
+        if (Options.Get(CommonOptionBag.GeneralTraits) != CommonOptionBag.GeneralTraitsOptions.Legacy && expr.Name.EndsWith("?")) {
           var nameWithoutQuestionMark = expr.Name[..^1];
           if (nameWithoutQuestionMark.Length != 0 &&
               moduleInfo.TopLevels.TryGetValue(nameWithoutQuestionMark, out decl) && decl is TraitDecl) {

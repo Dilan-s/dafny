@@ -19,12 +19,14 @@ namespace Microsoft.Dafny.LanguageServer.Handlers {
         .WithHandler<DafnyHoverHandler>()
         .WithHandler<DafnyDefinitionHandler>()
         .WithHandler<DafnyReferencesHandler>()
+        .WithHandler<DafnyRenameHandler>()
         .WithHandler<DafnyCompletionHandler>()
         .WithHandler<DafnySignatureHelpHandler>()
         .WithHandler<DafnyCounterExampleHandler>()
         .WithHandler<DafnyCodeActionHandler>()
         .WithHandler<DafnyFormattingHandler>()
-        .WithHandler<VerificationHandler>();
+        .WithHandler<VerificationHandler>()
+        .WithHandler<DafnyWorkspaceSymbolHandler>();
     }
   }
 }

@@ -4,7 +4,7 @@ using System.Linq;
 
 namespace Microsoft.Dafny;
 
-public class LocalVariable : RangeNode, IVariable, IAttributeBearingDeclaration, ISymbol {
+public class LocalVariable : RangeNode, IVariable, IAttributeBearingDeclaration {
   readonly string name;
   public string DafnyName => Name;
   public Attributes Attributes;
@@ -89,6 +89,18 @@ public class LocalVariable : RangeNode, IVariable, IAttributeBearingDeclaration,
     }
   }
 
+  /// <summary>
+  /// For a description of the difference between .Type and .UnnormalizedType, see Expression.UnnormalizedType.
+  /// </summary>
+  public Type UnnormalizedType {
+    get {
+      Contract.Ensures(Contract.Result<Type>() != null);
+
+      Contract.Assume(type != null);  /* we assume object has been resolved */
+      return type;
+    }
+  }
+
   public PreType PreType { get; set; }
 
   public bool IsMutable {
@@ -110,13 +122,16 @@ public class LocalVariable : RangeNode, IVariable, IAttributeBearingDeclaration,
 
   public IToken NameToken => RangeToken.StartToken;
   public bool IsTypeExplicit = false;
-  public override IEnumerable<Node> Children =>
+  public override IEnumerable<INode> Children =>
     (Attributes != null ? new List<Node> { Attributes } : Enumerable.Empty<Node>()).Concat(
       IsTypeExplicit ? new List<Node>() { type } : Enumerable.Empty<Node>());
 
-  public override IEnumerable<Node> PreResolveChildren =>
+  public override IEnumerable<INode> PreResolveChildren =>
     (Attributes != null ? new List<Node> { Attributes } : Enumerable.Empty<Node>()).Concat(
       IsTypeExplicit ? new List<Node>() { OptionalType ?? type } : Enumerable.Empty<Node>());
 
   public DafnySymbolKind Kind => DafnySymbolKind.Variable;
+  public string GetDescription(DafnyOptions options) {
+    return this.AsText();
+  }
 }

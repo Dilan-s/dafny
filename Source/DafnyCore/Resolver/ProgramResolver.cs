@@ -4,7 +4,7 @@ using System.Diagnostics.Contracts;
 using System.Linq;
 using System.Threading;
 
-namespace Microsoft.Dafny; 
+namespace Microsoft.Dafny;
 
 public class ProgramResolver {
   public Program Program { get; }
@@ -55,8 +55,10 @@ public class ProgramResolver {
       classMembers[moduleClassMembers.Key] = moduleClassMembers.Value;
     }
 
+    var rewriters = RewriterCollection.GetRewriters(Reporter, Program);
+
     var compilation = Program.Compilation;
-    foreach (var rewriter in compilation.Rewriters) {
+    foreach (var rewriter in rewriters) {
       cancellationToken.ThrowIfCancellationRequested();
       rewriter.PreResolve(Program);
     }
@@ -75,10 +77,15 @@ public class ProgramResolver {
 
     CheckDuplicateModuleNames(Program);
 
-    foreach (var rewriter in compilation.Rewriters) {
+    foreach (var rewriter in rewriters) {
       cancellationToken.ThrowIfCancellationRequested();
       rewriter.PostResolve(Program);
     }
+  }
+
+
+  public void AddSystemClass(TopLevelDeclWithMembers topLevelDeclWithMembers, Dictionary<string, MemberDecl> memberDictionary) {
+    classMembers[topLevelDeclWithMembers] = memberDictionary;
   }
 
   private void ProcessDeclarationResolutionResult(Dictionary<ModuleDecl, Action<ModuleDecl>> moduleDeclarationPointers, ModuleDecl decl,
@@ -137,6 +144,12 @@ public class ProgramResolver {
     systemModuleResolver.RevealAllInScope(SystemModuleManager.SystemModule.TopLevelDecls, SystemModuleManager.systemNameInfo.VisibilityScope);
     SystemModuleManager.ResolveValueTypeDecls(this);
 
+    if (Options.Get(CommonOptionBag.TypeSystemRefresh)) {
+      PreTypeResolver.ResolveDeclarations(
+        SystemModuleManager.SystemModule.TopLevelDecls.Where(d => d is not ClassDecl).ToList(),
+        systemModuleResolver, true);
+    }
+
     // The SystemModule is constructed with all its members already being resolved. Except for
     // the non-null type corresponding to class types.  They are resolved here:
     var systemModuleClassesWithNonNullTypes =
@@ -151,7 +164,7 @@ public class ProgramResolver {
 
     systemModuleResolver.ResolveTopLevelDecls_Core(
       ModuleDefinition.AllDeclarationsAndNonNullTypeDecls(systemModuleClassesWithNonNullTypes).ToList(),
-      new Graph<IndDatatypeDecl>(), new Graph<CoDatatypeDecl>(), SystemModuleManager.SystemModule.Name);
+      new Graph<IndDatatypeDecl>(), new Graph<CoDatatypeDecl>(), SystemModuleManager.SystemModule.Name, false);
 
     return systemModuleResolver.moduleClassMembers;
   }
@@ -246,7 +259,12 @@ public class ProgramResolver {
         continue;
       }
 
-      dependencies.AddEdge(literalDecl, moduleDecl);
+      if (toplevel is ModuleExportDecl) {
+        dependencies.AddEdge(moduleDecl, literalDecl);
+      } else {
+        dependencies.AddEdge(literalDecl, moduleDecl);
+      }
+
       var subBindings = bindings.SubBindings(moduleDecl.Name);
       ProcessDependencies(moduleDecl, subBindings ?? bindings, declarationPointers);
       if (!module.IsAbstract && moduleDecl is AbstractModuleDecl && ((AbstractModuleDecl)moduleDecl).QId.Root != null) {
@@ -267,7 +285,7 @@ public class ProgramResolver {
       // each enclosing module.
       if (!bindings.ResolveQualifiedModuleIdRootImport(aliasDecl, aliasDecl.TargetQId, out var root)) {
         //        if (!bindings.TryLookupFilter(alias.TargetQId.rootToken(), out root, m => alias != m)
-        Reporter.Error(MessageSource.Resolver, aliasDecl.tok, ModuleNotFoundErrorMessage(0, aliasDecl.TargetQId.Path));
+        Reporter.Error(MessageSource.Resolver, aliasDecl.TargetQId.Tok, ModuleNotFoundErrorMessage(0, aliasDecl.TargetQId.Path));
       } else {
         aliasDecl.TargetQId.Root = root;
         declarationPointers.AddOrUpdate(root, v => aliasDecl.TargetQId.Root = v, Util.Concat);

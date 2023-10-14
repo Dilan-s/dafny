@@ -11,6 +11,9 @@ public class Constructor : Method {
   }
 
   public override DafnySymbolKind Kind => DafnySymbolKind.Constructor;
+  protected override string GetQualifiedName() {
+    return EnclosingClass.Name;
+  }
 
   public List<Statement> BodyInit {  // first part of Body's statements
     get {
@@ -34,12 +37,14 @@ public class Constructor : Method {
     bool isGhost,
     List<TypeParameter> typeArgs,
     List<Formal> ins,
-    List<AttributedExpression> req, [Captured] Specification<FrameExpression> mod,
+    List<AttributedExpression> req,
+    Specification<FrameExpression> reads,
+    [Captured] Specification<FrameExpression> mod,
     List<AttributedExpression> ens,
     Specification<Expression> decreases,
     DividedBlockStmt body,
     Attributes attributes, IToken signatureEllipsis)
-    : base(rangeToken, name, false, isGhost, typeArgs, ins, new List<Formal>(), req, mod, ens, decreases, body, attributes, signatureEllipsis) {
+    : base(rangeToken, name, false, isGhost, typeArgs, ins, new List<Formal>(), req, reads, mod, ens, decreases, body, attributes, signatureEllipsis) {
     Contract.Requires(rangeToken != null);
     Contract.Requires(name != null);
     Contract.Requires(cce.NonNullElements(typeArgs));

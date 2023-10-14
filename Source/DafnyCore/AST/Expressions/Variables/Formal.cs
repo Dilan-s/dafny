@@ -4,15 +4,11 @@ using System.Linq;
 
 namespace Microsoft.Dafny;
 
-public class Formal : NonglobalVariable, ISymbol {
+public class Formal : NonglobalVariable {
   public readonly bool InParam;  // true to in-parameter, false for out-parameter
-  public override bool IsMutable {
-    get {
-      return !InParam;
-    }
-  }
+  public override bool IsMutable => !InParam;
   public readonly bool IsOld;
-  public readonly Expression DefaultValue;
+  public Expression DefaultValue;
   public readonly bool IsNameOnly;
   public readonly bool IsOlder;
   public readonly string NameForCompilation;
@@ -45,11 +41,10 @@ public class Formal : NonglobalVariable, ISymbol {
   public override string CompileName =>
     compileName ??= SanitizeName(NameForCompilation);
 
-  public override IEnumerable<Node> Children =>
-    DefaultValue != null ? new List<Node>() { DefaultValue } : Enumerable.Empty<Node>();
+  public override IEnumerable<INode> Children =>
+    (DefaultValue != null ? new List<Node> { DefaultValue } : Enumerable.Empty<Node>()).Concat(base.Children);
 
-  public override IEnumerable<Node> PreResolveChildren => Children;
-  public DafnySymbolKind Kind => DafnySymbolKind.Variable;
+  public override IEnumerable<INode> PreResolveChildren => Children;
 }
 
 /// <summary>

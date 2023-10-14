@@ -1,6 +1,5 @@
 ﻿using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 using System;
-using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.Caching;
@@ -13,21 +12,23 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
   /// <summary>
   /// Contains a collection of ProjectManagers
   /// </summary>
-  public class ProjectManagerDatabase : IProjectDatabase, IDisposable {
+  public class ProjectManagerDatabase : IProjectDatabase {
     private object myLock = new();
     public const int ProjectFileCacheExpiryTime = 100;
 
     private readonly CreateProjectManager createProjectManager;
     private readonly ILogger<ProjectManagerDatabase> logger;
-    private readonly ExecutionEngine boogieEngine;
 
     private readonly Dictionary<Uri, ProjectManager> managersByProject = new();
     private readonly Dictionary<Uri, ProjectManager> managersBySourceFile = new();
     private readonly LanguageServerFilesystem fileSystem;
     private readonly VerificationResultCache verificationCache = new();
+    private readonly CustomStackSizePoolTaskScheduler scheduler;
     private readonly MemoryCache projectFilePerFolderCache = new("projectFiles");
     private readonly object nullRepresentative = new(); // Needed because you can't store null in the MemoryCache, but that's a value we want to cache.
     private readonly DafnyOptions serverOptions;
+
+    private const int stackSize = 10 * 1024 * 1024;
 
     public ProjectManagerDatabase(
       LanguageServerFilesystem fileSystem,
@@ -38,7 +39,7 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
       this.logger = logger;
       this.fileSystem = fileSystem;
       this.serverOptions = serverOptions;
-      boogieEngine = new ExecutionEngine(serverOptions, verificationCache);
+      this.scheduler = CustomStackSizePoolTaskScheduler.Create(stackSize, serverOptions.VcsCores);
     }
 
     public async Task OpenDocument(TextDocumentItem document) {
@@ -83,7 +84,7 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
       await close;
     }
 
-    public async Task<IdeState?> GetResolvedDocumentAsyncNormalizeUri(TextDocumentIdentifier documentId) {
+    public async Task<IdeState?> GetParsedDocumentNormalizeUri(TextDocumentIdentifier documentId) {
       // Resolves drive letter capitalisation issues in Windows that occur when this method is called
       // from an in-process client without serializing documentId
       var normalizedUri = DocumentUri.From(documentId.Uri.ToString());
@@ -92,16 +93,26 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
       };
       var manager = await GetProjectManager(documentId, false);
       if (manager != null) {
-        return await manager.GetSnapshotAfterResolutionAsync()!;
+        return await manager.GetStateAfterParsingAsync();
       }
 
       return null;
     }
 
+    public Task<IdeState?> GetResolvedDocumentAsyncNormalizeUri(TextDocumentIdentifier documentId) {
+      // Resolves drive letter capitalisation issues in Windows that occur when this method is called
+      // from an in-process client without serializing documentId
+      var normalizedUri = DocumentUri.From(documentId.Uri.ToString());
+      documentId = documentId with {
+        Uri = normalizedUri
+      };
+      return GetResolvedDocumentAsyncInternal(documentId);
+    }
+
     public async Task<IdeState?> GetResolvedDocumentAsyncInternal(TextDocumentIdentifier documentId) {
       var manager = await GetProjectManager(documentId, false);
       if (manager != null) {
-        return await manager.GetSnapshotAfterResolutionAsync()!;
+        return await manager.GetStateAfterResolutionAsync();
       }
 
       return null;
@@ -116,9 +127,10 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
       };
       var manager = await GetProjectManager(documentId, false);
       if (manager != null) {
-        return await manager.GetLastDocumentAsync()!;
+        return await manager.GetLastDocumentAsync();
       }
 
+      logger.LogDebug($"GetLastDocumentAsync returned null for {documentId.Uri}");
       return null;
     }
 
@@ -139,14 +151,21 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
         if (projectManagerForFile != null) {
           var filesProjectHasChanged = !projectManagerForFile.Project.Equals(project);
           if (filesProjectHasChanged) {
-            var projectFileHasChanged = projectManagerForFile.Project.Uri == project.Uri;
-            if (projectFileHasChanged) {
+            var projectFileContentHasChanged = projectManagerForFile.Project.Uri == project.Uri;
+            if (projectFileContentHasChanged) {
+              // Scrap the project manager.
               var _ = projectManagerForFile.CloseAsync();
+              managersByProject.Remove(project.Uri);
             } else {
-              projectManagerForFile.CloseDocument(out _);
+              var previousProjectHasNoDocuments = projectManagerForFile.CloseDocument(out _);
+              if (previousProjectHasNoDocuments) {
+                // Enable garbage collection
+                managersByProject.Remove(projectManagerForFile.Project.Uri);
+              }
             }
 
-            projectManagerForFile = createProjectManager(boogieEngine, project);
+            projectManagerForFile = managersByProject.GetValueOrDefault(project.Uri) ??
+                                    createProjectManager(scheduler, verificationCache, project);
             projectManagerForFile.OpenDocument(documentId.Uri.ToUri(), true);
           }
         } else {
@@ -163,7 +182,7 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
             }
           } else {
             if (createOnDemand) {
-              projectManagerForFile = createProjectManager(boogieEngine, project);
+              projectManagerForFile = createProjectManager(scheduler, verificationCache, project);
               projectManagerForFile.OpenDocument(documentId.Uri.ToUri(), true);
             } else {
               return null;
@@ -178,14 +197,15 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
     }
 
     public async Task<DafnyProject> GetProject(Uri uri) {
-      return (await FindProjectFile(uri)) ?? ImplicitProject(uri);
+      return uri.LocalPath.EndsWith(DafnyProject.FileName)
+        ? await DafnyProject.Open(fileSystem, uri)
+        : (await FindProjectFile(uri) ?? ImplicitProject(uri));
     }
 
     public static DafnyProject ImplicitProject(Uri uri) {
       var implicitProject = new DafnyProject {
         Includes = new[] { uri.LocalPath },
-        Uri = uri,
-        IsImplicitProject = true
+        Uri = uri
       };
       return implicitProject;
     }
@@ -202,12 +222,6 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
         }
 
         folder = Path.GetDirectoryName(folder);
-      }
-
-      if (projectFile != null && projectFile.Uri != sourceUri && !serverOptions.Get(ServerCommand.ProjectMode)) {
-        projectFile.Uri = sourceUri;
-        projectFile.IsImplicitProject = true;
-        projectFile.Includes = new[] { sourceUri.LocalPath };
       }
 
       return projectFile;
@@ -232,12 +246,11 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
         return Task.FromResult<DafnyProject?>(null);
       }
 
-      return DafnyProject.Open(fileSystem, configFileUri, TextWriter.Null, TextWriter.Null);
+      return DafnyProject.Open(fileSystem, configFileUri);
     }
 
     public IEnumerable<ProjectManager> Managers => managersByProject.Values;
     public void Dispose() {
-      boogieEngine.Dispose();
       foreach (var manager in Managers) {
         manager.Dispose();
       }

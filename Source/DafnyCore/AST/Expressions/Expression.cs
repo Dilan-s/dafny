@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Numerics;
-using Microsoft.Boogie;
 
 namespace Microsoft.Dafny;
 
@@ -58,6 +57,21 @@ public abstract class Expression : TokenNode {
 
       //modifies type;
       type = value.Normalize();
+    }
+  }
+
+  /// <summary>
+  /// The new type inference includes a "type adjustment" phase, which determines the best subset types for a program. This phase works
+  /// by adjusting (mutating) types in place, using "AdjustableType" type proxies. During that phase, it is necessary to obtain the
+  /// un-normalized type stored in each AST node, which is what the "UnnormalizedType" property does. This property should only be used
+  /// during the type adjustment phase. After type inference is complete, use ".Type" instead.
+  /// </summary>
+  public Type UnnormalizedType {
+    get {
+      return type;
+    }
+    set {
+      type = value;
     }
   }
   /// <summary>
@@ -760,6 +774,18 @@ public abstract class Expression : TokenNode {
   }
 
   /// <summary>
+  /// If "expr" is an expression that exists only as a resolved expression, then wrap it in the usual unresolved structure.
+  /// </summary>
+  public static Expression WrapAsParsedStructureIfNecessary(Expression expr, SystemModuleManager systemModuleManager) {
+    if (expr is FunctionCallExpr functionCallExpr) {
+      return WrapResolvedCall(functionCallExpr, systemModuleManager);
+    } else if (expr is MemberSelectExpr memberSelectExpr) {
+      return WrapResolvedMemberSelect(memberSelectExpr);
+    }
+    return expr;
+  }
+
+  /// <summary>
   /// Create a resolved case expression for a match expression
   /// </summary>
   public static MatchCaseExpr CreateMatchCase(MatchCaseExpr old_case, Expression new_body) {
@@ -877,6 +903,6 @@ public abstract class Expression : TokenNode {
     return le == null ? null : le.Value as string;
   }
 
-  public override IEnumerable<Node> Children => SubExpressions;
-  public override IEnumerable<Node> PreResolveChildren => Children;
+  public override IEnumerable<INode> Children => SubExpressions;
+  public override IEnumerable<INode> PreResolveChildren => Children;
 }

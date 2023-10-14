@@ -88,7 +88,7 @@ public class Attributes : TokenNode {
   /// the enclosing class, or any enclosing module.  Settings closer to the declaration
   /// override those further away.
   /// </summary>
-  public static bool ContainsBoolAtAnyLevel(MemberDecl decl, string attribName) {
+  public static bool ContainsBoolAtAnyLevel(MemberDecl decl, string attribName, bool defaultVal = false) {
     bool setting = true;
     if (Attributes.ContainsBool(decl.Attributes, attribName, ref setting)) {
       return setting;
@@ -107,7 +107,7 @@ public class Attributes : TokenNode {
       mod = mod.EnclosingModule;
     }
 
-    return false;
+    return defaultVal;
   }
 
   /// <summary>
@@ -191,12 +191,12 @@ public class Attributes : TokenNode {
     }
   }
 
-  public override IEnumerable<Node> Children => Args.Concat<Node>(
+  public override IEnumerable<INode> Children => Args.Concat<Node>(
     Prev == null
       ? Enumerable.Empty<Node>()
       : new List<Node> { Prev });
 
-  public override IEnumerable<Node> PreResolveChildren => Children;
+  public override IEnumerable<INode> PreResolveChildren => Children;
 }
 
 public static class AttributesExtensions {

@@ -241,13 +241,13 @@ namespace Microsoft.Dafny.Compilers {
       var rhsType = tupleTypeArgsList[L - 1];
 
       var lhs = (MultiSelectExpr)s0.Lhs;
-      var indices = new List<string>();
+      var indices = new List<Action<ConcreteSyntaxTree>>();
       for (var i = 0; i < lhs.Indices.Count; i++) {
         var wIndex = new ConcreteSyntaxTree();
         wIndex.Write("((java.math.BigInteger)");
         EmitTupleSelect(tup, i + 1, wIndex);
         wIndex.Write(")");
-        indices.Add(wIndex.ToString());
+        indices.Add(wr => wr.Write(wIndex.ToString()));
       }
 
       var (wArray, wRhs) = EmitArrayUpdate(indices, rhsType, wr);
@@ -1083,6 +1083,7 @@ namespace Microsoft.Dafny.Compilers {
       switch (AsJavaNativeType(nt)) {
         case JavaNativeType.Byte: return "(byte) ";
         case JavaNativeType.Short: return "(short) ";
+        case JavaNativeType.Long: return "(long) ";
         default: return "";
       }
     }
@@ -1523,14 +1524,17 @@ namespace Microsoft.Dafny.Compilers {
       }
     }
 
-    protected override ConcreteSyntaxTree EmitArraySelect(List<string> indices, Type elmtType, ConcreteSyntaxTree wr) {
+    protected override ConcreteSyntaxTree EmitArraySelect(List<Action<ConcreteSyntaxTree>> indices, Type elmtType, ConcreteSyntaxTree wr) {
       Contract.Assert(indices != null && 1 <= indices.Count);  // follows from precondition
       var w = EmitArraySelect(indices.Count, out var wIndices, elmtType, wr);
       for (int i = 0; i < indices.Count; i++) {
-        if (!int.TryParse(indices[i], out _)) {
-          wIndices[i].Write($"{DafnyHelpersClass}.toInt({indices[i]})");
+        var stringifiedIndex = new ConcreteSyntaxTree();
+        indices[i](stringifiedIndex);
+        var index = stringifiedIndex.ToString();
+        if (!int.TryParse(index, out _)) {
+          wIndices[i].Write($"{DafnyHelpersClass}.toInt({index})");
         } else {
-          wIndices[i].Write(indices[i]);
+          wIndices[i].Write(index);
         }
       }
       return w;
@@ -1590,31 +1594,50 @@ namespace Microsoft.Dafny.Compilers {
       return w;
     }
 
-    protected override (ConcreteSyntaxTree/*array*/, ConcreteSyntaxTree/*rhs*/) EmitArrayUpdate(List<string> indices, Type elementType, ConcreteSyntaxTree wr) {
+    protected override (ConcreteSyntaxTree/*array*/, ConcreteSyntaxTree/*rhs*/) EmitArrayUpdate(List<Action<ConcreteSyntaxTree>> indices, Type elementType, ConcreteSyntaxTree wr) {
       elementType = DatatypeWrapperEraser.SimplifyType(Options, elementType);
       ConcreteSyntaxTree wArray, wRhs;
       if (indices.Count == 1) {
         if (elementType.IsTypeParameter) {
           wr.Write($"{FormatTypeDescriptorVariable(elementType.AsTypeParameter)}.setArrayElement(");
           wArray = wr.Fork();
-          wr.Write($", {DafnyHelpersClass}.toInt({indices[0]}), ");
+          wr.Write($", {DafnyHelpersClass}.toInt(");
+          indices[0](wr);
+          wr.Write("), ");
           wRhs = wr.Fork();
           wr.Write(")");
         } else {
           wArray = wr.Fork();
-          wr.Write($"[{DafnyHelpersClass}.toInt({indices[0]})] = ");
+          wr.Write($"[{DafnyHelpersClass}.toInt(");
+          indices[0](wr);
+          wr.Write(")] = ");
           wRhs = wr.Fork();
         }
       } else {
         if (elementType.IsTypeParameter) {
           wArray = wr.Fork();
-          wr.Write($".set({indices.Comma(ix => $"{DafnyHelpersClass}.toInt({ix})")}, ");
+          wr.Write($".set(");
+          for (int i = 0; i < indices.Count; i++) {
+            if (i > 0) {
+              wr.Write(", ");
+            }
+            wr.Write($"{DafnyHelpersClass}.toInt(");
+            indices[i](wr);
+            wr.Write(")");
+          }
+          wr.Write(", ");
           wRhs = wr.Fork();
           wr.Write(")");
         } else {
           wr.Write($"(({TypeName(elementType, wr, Token.NoToken)}{Repeat("[]", indices.Count)}) (");
           wArray = wr.Fork();
-          wr.Write($").elmts){Util.Comma("", indices, ix => $"[{DafnyHelpersClass}.toInt({ix})]")} = ");
+          wr.Write($").elmts)");
+          for (int i = 0; i < indices.Count; i++) {
+            wr.Write($"[{DafnyHelpersClass}.toInt(");
+            indices[i](wr);
+            wr.Write(")]");
+          }
+          wr.Write(" = ");
           wRhs = wr.Fork();
         }
       }
@@ -2414,10 +2437,6 @@ namespace Microsoft.Dafny.Compilers {
     protected override void EmitNameAndActualTypeArgs(string protectedName, List<Type> typeArgs, IToken tok, ConcreteSyntaxTree wr) {
       EmitActualTypeArgs(typeArgs, tok, wr);
       wr.Write(protectedName);
-    }
-
-    protected override string GenerateLhsDecl(string target, Type type, ConcreteSyntaxTree wr, IToken tok) {
-      return TypeName(type, wr, tok) + " " + target;
     }
 
     protected override void EmitNew(Type type, IToken tok, CallStmt initCall, ConcreteSyntaxTree wr, ConcreteSyntaxTree wStmts) {
@@ -3297,11 +3316,11 @@ namespace Microsoft.Dafny.Compilers {
       return new ClassWriter(this, instanceMemberWriter, ctorBodyWriter, staticMemberWriter);
     }
 
-    protected override void EmitDestructor(string source, Formal dtor, int formalNonGhostIndex, DatatypeCtor ctor, List<Type> typeArgs, Type bvType, ConcreteSyntaxTree wr) {
+    protected override void EmitDestructor(Action<ConcreteSyntaxTree> source, Formal dtor, int formalNonGhostIndex, DatatypeCtor ctor, List<Type> typeArgs, Type bvType, ConcreteSyntaxTree wr) {
       if (DatatypeWrapperEraser.IsErasableDatatypeWrapper(Options, ctor.EnclosingDatatype, out var coreDtor)) {
         Contract.Assert(coreDtor.CorrespondingFormals.Count == 1);
         Contract.Assert(dtor == coreDtor.CorrespondingFormals[0]); // any other destructor is a ghost
-        wr.Write(source);
+        source(wr);
         return;
       }
       string dtorName;
@@ -3312,7 +3331,9 @@ namespace Microsoft.Dafny.Compilers {
       } else {
         dtorName = FieldName(dtor, formalNonGhostIndex);
       }
-      wr.Write("(({0}){1}{2}).{3}", DtCtorName(ctor, typeArgs, wr), source, ctor.EnclosingDatatype is CoDatatypeDecl ? ".Get()" : "", dtorName);
+      wr.Write("(({0})", DtCtorName(ctor, typeArgs, wr));
+      source(wr);
+      wr.Write("{0}).{1}", ctor.EnclosingDatatype is CoDatatypeDecl ? ".Get()" : "", dtorName);
     }
 
     private void CreateLambdaFunctionInterface(int i, ConcreteSyntaxTree outputWr) {
@@ -3457,7 +3478,7 @@ namespace Microsoft.Dafny.Compilers {
       return wwr;
     }
 
-    protected override string GetSubtypeCondition(string tmpVarName, Type boundVarType, IToken tok, ConcreteSyntaxTree wPreconditions) {
+    protected override Action<ConcreteSyntaxTree> GetSubtypeCondition(string tmpVarName, Type boundVarType, IToken tok, ConcreteSyntaxTree wPreconditions) {
       string typeTest;
 
       if (boundVarType.IsRefType) {
@@ -3474,7 +3495,8 @@ namespace Microsoft.Dafny.Compilers {
       } else {
         typeTest = "true";
       }
-      return typeTest;
+
+      return typeTest == null ? null : wr => wr.Write(typeTest);
     }
 
     protected override void EmitDowncastVariableAssignment(string boundVarName, Type boundVarType, string tmpVarName,
@@ -3732,8 +3754,11 @@ namespace Microsoft.Dafny.Compilers {
       return w;
     }
 
-    protected override ConcreteSyntaxTree CreateForLoop(string indexVar, string bound, ConcreteSyntaxTree wr, string start = null) {
+    protected override ConcreteSyntaxTree CreateForLoop(string indexVar, Action<ConcreteSyntaxTree> boundAction, ConcreteSyntaxTree wr, string start = null) {
       start = start ?? "java.math.BigInteger.ZERO";
+      var boundWriter = new ConcreteSyntaxTree();
+      boundAction(boundWriter);
+      var bound = boundWriter.ToString();
       return wr.NewNamedBlock($"for (java.math.BigInteger {indexVar} = {start}; {indexVar}.compareTo({bound}) < 0; {indexVar} = {indexVar}.add(java.math.BigInteger.ONE))");
     }
 
@@ -4015,9 +4040,12 @@ namespace Microsoft.Dafny.Compilers {
         if (toType.IsNumericBased(Type.NumericPersuasion.Real)) {
           // (int or bv or char) -> real
           Contract.Assert(AsNativeType(toType) == null);
+          var fromNative = AsNativeType(fromType);
           wr.Write($"new {DafnyBigRationalClass}(");
-          if (AsNativeType(fromType) != null) {
-            wr.Write("java.math.BigInteger.valueOf");
+          if (fromNative != null) {
+            wr.Write(fromNative.LowerBound >= 0
+              ? $"{DafnyHelpersClass}.unsignedToBigInteger"
+              : "java.math.BigInteger.valueOf");
             TrParenExpr(arg, wr, inLetExprBody, wStmts);
             wr.Write(", java.math.BigInteger.ONE)");
           } else if (fromType.IsCharType) {
@@ -4057,19 +4085,10 @@ namespace Microsoft.Dafny.Compilers {
             }
           } else if (fromNative != null && toNative == null) {
             // native (int or bv) -> big-integer (int or bv)
-            if (fromNative.Sel == NativeType.Selection.ULong) {
-              // Can't just use .longValue() because that may return a negative
-              wr.Write($"{DafnyHelpersClass}.unsignedLongToBigInteger");
-              TrParenExpr(arg, wr, inLetExprBody, wStmts);
-            } else {
-              wr.Write("java.math.BigInteger.valueOf(");
-              if (fromNative.LowerBound >= 0) {
-                TrParenExpr($"{GetBoxedNativeTypeName(fromNative)}.toUnsignedLong", arg, wr, inLetExprBody, wStmts);
-              } else {
-                TrParenExpr(arg, wr, inLetExprBody, wStmts);
-              }
-              wr.Write(")");
-            }
+            wr.Write(fromNative.LowerBound >= 0
+              ? $"{DafnyHelpersClass}.unsignedToBigInteger"
+              : "java.math.BigInteger.valueOf");
+            TrParenExpr(arg, wr, inLetExprBody, wStmts);
           } else if (fromNative != null && NativeTypeSize(toNative) == NativeTypeSize(fromNative)) {
             // native (int or bv) -> native (int or bv)
             // Cast between signed and unsigned, which have the same Java type

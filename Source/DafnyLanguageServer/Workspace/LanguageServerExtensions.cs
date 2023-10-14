@@ -6,6 +6,7 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Server;
 using System;
+using System.Reactive.Concurrency;
 using Microsoft.Extensions.Options;
 
 namespace Microsoft.Dafny.LanguageServer.Workspace {
@@ -26,14 +27,17 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
     private static IServiceCollection WithDafnyWorkspace(this IServiceCollection services) {
       return services
         .AddSingleton<IProjectDatabase, ProjectManagerDatabase>()
-        .AddSingleton<CreateProjectManager>(provider => (boogieEngine, documentIdentifier) => new ProjectManager(
+        .AddSingleton<CreateProjectManager>(provider => (scheduler, cache, documentIdentifier) => new ProjectManager(
           provider.GetRequiredService<DafnyOptions>(),
           provider.GetRequiredService<ILogger<ProjectManager>>(),
-          provider.GetRequiredService<IRelocator>(),
+          provider.GetRequiredService<CreateMigrator>(),
           provider.GetRequiredService<IFileSystem>(),
+          provider.GetRequiredService<INotificationPublisher>(),
+          provider.GetRequiredService<IGutterIconAndHoverVerificationDetailsManager>(),
           provider.GetRequiredService<CreateCompilationManager>(),
           provider.GetRequiredService<CreateIdeStateObserver>(),
-          boogieEngine,
+          scheduler,
+          cache,
           documentIdentifier))
         .AddSingleton<IFileSystem, LanguageServerFilesystem>()
         .AddSingleton<IDafnyParser>(serviceProvider => {
@@ -44,23 +48,14 @@ namespace Microsoft.Dafny.LanguageServer.Workspace {
             serviceProvider.GetRequiredService<ILogger<DafnyLangParser>>(),
             serviceProvider.GetRequiredService<ILogger<CachingParser>>());
         })
-        .AddSingleton<ITextDocumentLoader>(CreateTextDocumentLoader)
+        .AddSingleton<ITextDocumentLoader, TextDocumentLoader>()
         .AddSingleton<INotificationPublisher, NotificationPublisher>()
-        .AddSingleton<IRelocator, Relocator>()
+        .AddSingleton<CreateMigrator>(provider => (changes, cancellationToken) => new Migrator(
+          provider.GetRequiredService<ILogger<Migrator>>(),
+          provider.GetRequiredService<ILogger<LegacySignatureAndCompletionTable>>(),
+          changes, cancellationToken))
         .AddSingleton<ISymbolGuesser, SymbolGuesser>()
-        .AddSingleton<ICompilationStatusNotificationPublisher, CompilationStatusNotificationPublisher>()
         .AddSingleton<ITelemetryPublisher, TelemetryPublisher>();
-    }
-
-    public static TextDocumentLoader CreateTextDocumentLoader(IServiceProvider services) {
-      return TextDocumentLoader.Create(
-        services.GetRequiredService<IDafnyParser>(),
-        services.GetRequiredService<ISymbolResolver>(),
-        services.GetRequiredService<ISymbolTableFactory>(),
-        services.GetRequiredService<IGhostStateDiagnosticCollector>(),
-        services.GetRequiredService<ICompilationStatusNotificationPublisher>(),
-        services.GetRequiredService<ILogger<ITextDocumentLoader>>()
-      );
     }
   }
 }

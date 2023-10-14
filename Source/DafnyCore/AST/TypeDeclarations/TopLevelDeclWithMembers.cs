@@ -27,6 +27,13 @@ public abstract class TopLevelDeclWithMembers : TopLevelDecl, IHasSymbolChildren
     return this == b || this.ParentTraitHeads.Exists(tr => tr.HeadDerivesFrom(b));
   }
 
+  public void AddParentTypeParameterSubstitutions(Dictionary<TypeParameter, Type> typeMap) {
+    foreach (var entry in ParentFormalTypeParametersToActuals) {
+      var v = entry.Value.Subst(typeMap);
+      typeMap.Add(entry.Key, v);
+    }
+  }
+
   [FilledInDuringResolution] public InheritanceInformationClass ParentTypeInformation;
   public class InheritanceInformationClass {
     private readonly Dictionary<TraitDecl, List<(Type, List<TraitDecl> /*via this parent path*/)>> info = new Dictionary<TraitDecl, List<(Type, List<TraitDecl>)>>();
@@ -126,9 +133,9 @@ public abstract class TopLevelDeclWithMembers : TopLevelDecl, IHasSymbolChildren
     return types;
   }
 
-  public override IEnumerable<Node> Children => ParentTraits.Concat<Node>(Members);
+  public override IEnumerable<INode> Children => ParentTraits.Concat<Node>(Members);
 
-  public override IEnumerable<Node> PreResolveChildren => ParentTraits.Concat<Node>(MembersBeforeResolution);
+  public override IEnumerable<INode> PreResolveChildren => ParentTraits.Concat<Node>(MembersBeforeResolution);
 
   /// <summary>
   /// Returns the set of transitive parent traits (not including "this" itself).
@@ -212,7 +219,7 @@ public abstract class TopLevelDeclWithMembers : TopLevelDecl, IHasSymbolChildren
             extremePredicate.PrefixPredicate = new PrefixPredicate(extremePredicate.RangeToken, extraName, extremePredicate.HasStaticKeyword,
               tyvars, k, formals,
               extremePredicate.Req.ConvertAll(cloner.CloneAttributedExpr),
-              extremePredicate.Reads.ConvertAll(cloner.CloneFrameExpr),
+              cloner.CloneSpecFrameExpr(extremePredicate.Reads),
               extremePredicate.Ens.ConvertAll(cloner.CloneAttributedExpr),
               new Specification<Expression>(new List<Expression>() { new IdentifierExpr(extremePredicate.tok, k.Name) }, null),
               cloner.CloneExpr(extremePredicate.Body),
@@ -238,7 +245,8 @@ public abstract class TopLevelDeclWithMembers : TopLevelDecl, IHasSymbolChildren
               : extremeLemma.Ens.ConvertAll(cloner.CloneAttributedExpr);
             extremeLemma.PrefixLemma = new PrefixLemma(extremeLemma.RangeToken, extraName, extremeLemma.HasStaticKeyword,
               extremeLemma.TypeArgs.ConvertAll(cloner.CloneTypeParam), k, formals, extremeLemma.Outs.ConvertAll(f => cloner.CloneFormal(f, false)),
-              req, cloner.CloneSpecFrameExpr(extremeLemma.Mod), ens,
+              req, cloner.CloneSpecFrameExpr(extremeLemma.Reads),
+              cloner.CloneSpecFrameExpr(extremeLemma.Mod), ens,
               new Specification<Expression>(decr, null),
               null, // Note, the body for the prefix method will be created once the call graph has been computed and the SCC for the greatest lemma is known
               cloner.CloneAttributes(extremeLemma.Attributes), extremeLemma);
@@ -248,7 +256,7 @@ public abstract class TopLevelDeclWithMembers : TopLevelDecl, IHasSymbolChildren
           extraMember.InheritVisibility(m, false);
           members.Add(extraName.Value, extraMember);
         } else if (m is Function f && f.ByMethodBody != null) {
-          ModuleResolver.RegisterByMethod(f, this);
+          resolver.RegisterByMethod(f, this);
         }
       } else if (m is Constructor && !((Constructor)m).HasName) {
         resolver.reporter.Error(MessageSource.Resolver, m, "More than one anonymous constructor");
@@ -259,6 +267,9 @@ public abstract class TopLevelDeclWithMembers : TopLevelDecl, IHasSymbolChildren
   }
   public virtual IEnumerable<ISymbol> ChildSymbols => Members.OfType<ISymbol>();
   public virtual DafnySymbolKind Kind => DafnySymbolKind.Class;
+  public virtual string GetDescription(DafnyOptions options) {
+    return $"{WhatKind} {Name}";
+  }
 }
 
 public static class RevealableTypeDeclHelper {

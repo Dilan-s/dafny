@@ -3,7 +3,7 @@ using System.Diagnostics.Contracts;
 namespace Microsoft.Dafny;
 
 [ContractClass(typeof(IVariableContracts))]
-public interface IVariable : IDeclarationOrUsage {
+public interface IVariable : ISymbol {
   string Name {
     get;
   }
@@ -33,6 +33,13 @@ public interface IVariable : IDeclarationOrUsage {
     set;
   }
   Type Type {
+    get;
+  }
+
+  /// <summary>
+  /// For a description of the difference between .Type and .UnnormalizedType, see Expression.UnnormalizedType.
+  /// </summary>
+  Type UnnormalizedType {
     get;
   }
   Type OptionalType {

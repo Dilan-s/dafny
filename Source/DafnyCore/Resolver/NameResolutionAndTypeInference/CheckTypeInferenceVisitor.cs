@@ -1,3 +1,10 @@
+//-----------------------------------------------------------------------------
+//
+// Copyright by the contributors to the Dafny Project
+// SPDX-License-Identifier: MIT
+//
+//-----------------------------------------------------------------------------
+
 using System.Collections.Generic;
 using System.Diagnostics.Contracts;
 using System.Linq;
@@ -8,7 +15,6 @@ namespace Microsoft.Dafny;
 
 class CheckTypeInferenceVisitor : ASTVisitor<TypeInferenceCheckingContext> {
   private readonly ModuleResolver resolver;
-  private ErrorReporter reporter => resolver.reporter;
 
   public CheckTypeInferenceVisitor(ModuleResolver resolver) {
     this.resolver = resolver;
@@ -205,7 +211,7 @@ class CheckTypeInferenceVisitor : ASTVisitor<TypeInferenceCheckingContext> {
       var e = (ConversionExpr)expr;
       if (e.ToType.IsRefType) {
         var fromType = e.E.Type;
-        Contract.Assert(resolver.Options.Get(CommonOptionBag.GeneralTraits) || fromType.IsRefType);
+        Contract.Assert(resolver.Options.Get(CommonOptionBag.GeneralTraits) != CommonOptionBag.GeneralTraitsOptions.Legacy || fromType.IsRefType);
         if (fromType.IsSubtypeOf(e.ToType, false, true) || e.ToType.IsSubtypeOf(fromType, false, true)) {
           // looks good
         } else {
@@ -222,7 +228,7 @@ class CheckTypeInferenceVisitor : ASTVisitor<TypeInferenceCheckingContext> {
       } else if (!e.ToType.IsSubtypeOf(fromType, false, true)) {
         resolver.ReportError(ResolutionErrors.ErrorId.r_never_succeeding_type_test, e.tok,
           "a type test to '{0}' must be from a compatible type (got '{1}')", e.ToType, fromType);
-      } else if (resolver.Options.Get(CommonOptionBag.GeneralTraits) && (fromType.IsTraitType || fromType.Equals(e.ToType))) {
+      } else if (resolver.Options.Get(CommonOptionBag.GeneralTraits) != CommonOptionBag.GeneralTraitsOptions.Legacy && (fromType.IsTraitType || fromType.Equals(e.ToType))) {
         // it's fine
       } else if (!e.ToType.IsRefType) {
         resolver.ReportError(ResolutionErrors.ErrorId.r_unsupported_type_test, e.tok,
@@ -375,7 +381,7 @@ class CheckTypeInferenceVisitor : ASTVisitor<TypeInferenceCheckingContext> {
     Contract.Requires(tok != null);
     Contract.Requires(t != null);
     Contract.Requires(what != null);
-    t = t.NormalizeExpandKeepConstraints();
+    t = t.Normalize(); // note, this keeps type synonyms, by design
 
     if (t is TypeProxy) {
       var proxy = (TypeProxy)t;

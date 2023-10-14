@@ -19,6 +19,8 @@ public class PythonBackend : ExecutableBackend {
   public override string TargetBaseDir(string dafnyProgramName) =>
     $"{Path.GetFileNameWithoutExtension(dafnyProgramName)}-py";
 
+  public override string TargetBasename(string dafnyProgramName) => "__main__";
+
   public override bool SupportsInMemoryCompilation => false;
   public override bool TextualTargetIsExecutable => true;
 
@@ -29,7 +31,7 @@ public class PythonBackend : ExecutableBackend {
     return new PythonCompiler(Options, Reporter);
   }
 
-  private static readonly Regex ModuleLine = new(@"^\s*assert\s+""([a-zA-Z0-9_]+(.[a-zA-Z0-9_]+)*)""\s*==\s*__name__\s*$");
+  private static readonly Regex ModuleLine = new(@"^\s*#\s*Module:\s+([a-zA-Z0-9_]+(.[a-zA-Z0-9_]+)*)\s*$");
 
   private static string FindModuleName(string externFilename) {
     using var rd = new StreamReader(new FileStream(externFilename, FileMode.Open, FileAccess.Read));

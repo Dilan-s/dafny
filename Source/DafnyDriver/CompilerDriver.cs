@@ -566,7 +566,7 @@ namespace Microsoft.Dafny {
       }
       
       if (options.DeleteCodeAfterRun) {
-        compiler.postCleanDirectory(paths.SourceDirectory, dafnyProgramName);
+        compiler.postCleanDirectory(targetPaths.SourceDirectory, dafnyProgramName);
       }
       return compiledCorrectly;
     }

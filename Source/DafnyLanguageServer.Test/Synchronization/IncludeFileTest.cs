@@ -28,7 +28,7 @@ method Test() {
     await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
     var document = await Projects.GetResolvedDocumentAsyncNormalizeUri(documentItem.Uri);
     Assert.NotNull(document);
-    Assert.All(document.GetDiagnostics(), a => Assert.Empty(a.Value));
+    Assert.Empty(document.GetAllDiagnostics());
   }
 
   // https://github.com/dafny-lang/language-server-csharp/issues/40
@@ -54,9 +54,9 @@ method Test() {
 include ""./hasWarning.dfy""
 ".TrimStart();
     var warningSource = "const tooManySemiColons := 3;";
-    await CreateAndOpenTestDocument(warningSource, Path.Combine(TestFileDirectory, "hasWarning.dfy"));
+    await CreateOpenAndWaitForResolve(warningSource, Path.Combine(TestFileDirectory, "hasWarning.dfy"));
     await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
-    await CreateAndOpenTestDocument(source, TestFilePath);
+    await CreateOpenAndWaitForResolve(source, TestFilePath);
     await AssertNoDiagnosticsAreComing(CancellationToken);
   }
 
@@ -95,11 +95,15 @@ include ""./cycleA.dfy""
 ".TrimStart();
     var documentItem = CreateTestDocument(source, TestFilePath);
     await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
-    var diagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
-    Assert.Equal(2, diagnostics.Length);
-    Assert.Contains(diagnostics, d => d.Message.Contains("cycle of includes"));
-    Assert.Contains(diagnostics, d => d.Message.Contains("the referenced file"));
-    Assert.Contains(diagnostics, d => d.Message.Contains("the referenced file") && d.Message.Contains("cycleB.dfy"));
+    // Parse diagnostics are currently only sent if they contain errors
+    // var parseDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+    // Assert.Single(parseDiagnostics);
+    // Assert.Contains(parseDiagnostics, d => d.Message.Contains("cycle of includes"));
+    var resolutionDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+    Assert.Equal(2, resolutionDiagnostics.Length);
+    Assert.Contains(resolutionDiagnostics, d => d.Message.Contains("cycle of includes"));
+    Assert.Contains(resolutionDiagnostics, d => d.Message.Contains("the referenced file"));
+    Assert.Contains(resolutionDiagnostics, d => d.Message.Contains("the referenced file") && d.Message.Contains("cycleB.dfy"));
   }
 
   [Fact]
@@ -131,7 +135,7 @@ ensures Foo(x) {{
 
 }}".TrimStart();
     await File.WriteAllTextAsync(temp, producer);
-    var documentItem2 = CreateTestDocument(consumer);
+    var documentItem2 = CreateTestDocument(consumer, "MethodWhosePostConditionFailsAndDependsOnIncludedFile.dfy");
     client.OpenDocument(documentItem2);
     var verificationDiagnostics = await GetLastDiagnostics(documentItem2, CancellationToken);
     Assert.Single(verificationDiagnostics);

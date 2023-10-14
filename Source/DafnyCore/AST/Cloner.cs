@@ -257,6 +257,9 @@ namespace Microsoft.Dafny {
         return inferredTypeProxy;
       } else if (t is ParamTypeProxy) {
         return new ParamTypeProxy(CloneTypeParam(((ParamTypeProxy)t).orig));
+      } else if (t is AdjustableType adjustableType) {
+        // don't bother keeping AdjustableType wrappers
+        return CloneType(adjustableType.T);
       } else {
         Contract.Assert(false); // unexpected type (e.g., no other type proxies are expected at this time)
         return null; // to please compiler
@@ -512,7 +515,7 @@ namespace Microsoft.Dafny {
       var formals = f.Formals.ConvertAll(p => CloneFormal(p, false));
       var result = f.Result != null ? CloneFormal(f.Result, false) : null;
       var req = f.Req.ConvertAll(CloneAttributedExpr);
-      var reads = f.Reads.ConvertAll(CloneFrameExpr);
+      var reads = CloneSpecFrameExpr(f.Reads);
       var decreases = CloneSpecExpr(f.Decreases);
       var ens = f.Ens.ConvertAll(CloneAttributedExpr);
       Expression body = CloneExpr(f.Body);

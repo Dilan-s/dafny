@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Microsoft.Dafny.LanguageServer.IntegrationTest.Util;
+using Microsoft.Dafny.LanguageServer.Workspace;
 using Microsoft.Dafny.LanguageServer.Workspace.Notifications;
 using OmniSharp.Extensions.JsonRpc;
 using Xunit;
@@ -32,7 +33,7 @@ public class ConcurrentLinearVerificationGutterStatusTester : LinearVerification
         .AddHandler(DafnyRequestNames.VerificationStatusGutter,
           NotificationHandler.For<VerificationStatusGutter>(NotifyAllVerificationGutterStatusReceivers))
     , o => {
-      o.Set(ServerCommand.LineVerificationStatus, true);
+      o.Set(GutterIconAndHoverVerificationDetailsManager.LineVerificationStatus, true);
       modifyOptions?.Invoke(o);
     });
   }
@@ -44,14 +45,14 @@ public class ConcurrentLinearVerificationGutterStatusTester : LinearVerification
     // That way, it can rebuild the trace for every file independently.
     for (var i = 0; i < MaxSimultaneousVerificationTasks; i++) {
       result.Add(VerifyTrace(@"
- .  |  |  |  I  |  | :predicate F(i: int) {
- .  |  |  |  I  |  | :  false // Should not be highlighted in gutter.
- .  |  |  |  I  |  | :}
-    |  |  |  I  |  | :
- .  S [S][ ][I][S][ ]:method H()
- .  S [=][=][-][~][O]:  ensures F(1)
- .  S [=][=][-][~][=]:{//Next: { assert false;
- .  S [S][ ][I][S][ ]:}", false, $"testfile{i}.dfy", true, true, verificationStatusGutterReceivers[i]));
+ .  |  |  |  |  I  |  |  | :predicate F(i: int) {
+ .  |  |  |  |  I  |  |  | :  false // Should not be highlighted in gutter.
+ .  |  |  |  |  I  |  |  | :}
+    |  |  |  |  I  |  |  | :
+ .  .  S [S][ ][I][I][S][ ]:method H()
+ .  .  S [=][=][-][-][~][O]:  ensures F(1)
+ .  .  S [=][=][-][-][~][=]:{//Replace: { assert false;
+ .  .  S [S][ ][I][I][S][ ]:}", false, $"EnsuresManyDocumentsCanBeVerifiedAtOnce{i}.dfy", true, true, verificationStatusGutterReceivers[i]));
     }
 
     for (var i = 0; i < MaxSimultaneousVerificationTasks; i++) {

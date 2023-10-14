@@ -10,6 +10,14 @@ public class ArrowType : UserDefinedType {
     get { return TypeArgs.GetRange(0, Arity); }
   }
 
+  public List<TypeParameter.TPVariance> Variances(bool negate = false) {
+    if (negate) {
+      return Enumerable.Range(0, Arity + 1).Select(i => i == Arity ? TypeParameter.TPVariance.Contra : TypeParameter.TPVariance.Co).ToList();
+    } else {
+      return Enumerable.Range(0, Arity + 1).Select(i => i == Arity ? TypeParameter.TPVariance.Co : TypeParameter.TPVariance.Contra).ToList();
+    }
+  }
+
   public Type Result {
     get { return TypeArgs[Arity]; }
   }
@@ -138,6 +146,6 @@ public class ArrowType : UserDefinedType {
     }
   }
 
-  public override IEnumerable<Node> Children => Args.Concat(new List<Node>() { Result });
-  public override IEnumerable<Node> PreResolveChildren => Args.Concat(new List<Node>() { Result });
+  public override IEnumerable<INode> Children => Args.Concat(new List<Node>() { Result });
+  public override IEnumerable<INode> PreResolveChildren => Args.Concat(new List<Node>() { Result });
 }

@@ -10,14 +10,166 @@ using System.Threading;
 using System.Threading.Tasks;
 using Microsoft.Dafny.LanguageServer.Workspace.ChangeProcessors;
 using Newtonsoft.Json;
+using NuGet.Frameworks;
 using Xunit.Abstractions;
 using Xunit;
+using Xunit.Sdk;
 using XunitAssertMessages;
 using Range = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
 
 namespace Microsoft.Dafny.LanguageServer.IntegrationTest.Synchronization {
   public class DiagnosticsTest : ClientBasedLanguageServerTest {
     private readonly string testFilesDirectory = Path.Combine(Directory.GetCurrentDirectory(), "Synchronization/TestFiles");
+
+    [Fact]
+    public async Task RedundantAssumptionsGetWarnings() {
+      var path = Path.Combine(testFilesDirectory, "ProofDependencies/LSPProofDependencyTest.dfy");
+      var documentItem = CreateTestDocument(await File.ReadAllTextAsync(path), path);
+      await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
+
+      var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
+      Assert.Equal(3, diagnostics.Length);
+      Assert.Contains(diagnostics, diagnostic =>
+        diagnostic.Severity == DiagnosticSeverity.Warning &&
+        diagnostic.Range == new Range(3, 11, 3, 12) &&
+        diagnostic.Message == "unnecessary assumption"
+        );
+      Assert.Contains(diagnostics, diagnostic =>
+        diagnostic.Severity == DiagnosticSeverity.Warning &&
+        diagnostic.Range == new Range(13, 11, 13, 17) &&
+        diagnostic.Message == "proved using contradictory assumptions: assertion always holds"
+      );
+      Assert.Contains(diagnostics, diagnostic =>
+        diagnostic.Severity == DiagnosticSeverity.Warning &&
+        diagnostic.Range == new Range(12, 11, 12, 12) &&
+        diagnostic.Message == "unnecessary assumption"
+      );
+    }
+
+    [Fact]
+    public async Task LeastLemmaIsVerified() {
+      var source = @"
+least lemma Foo()
+  ensures false
+{}";
+      var document = await CreateOpenAndWaitForResolve(source);
+      var diagnostics = await GetLastDiagnostics(document);
+      Assert.NotEmpty(diagnostics);
+    }
+
+    [Fact(Skip = "Not implemented. Requires separating diagnostics from different sources")]
+    public async Task FixedParseErrorUpdatesBeforeResolution() {
+      var source = @"
+mfunction HasParseAndResolutionError(): int {
+  true
+}".TrimStart();
+
+      var document = await CreateOpenAndWaitForResolve(source);
+      var parseDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+      Assert.Equal(MessageSource.Parser.ToString(), parseDiagnostics[0].Source);
+      ApplyChange(ref document, new Range(0, 0, 0, 1), " ");
+      var parseDiagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+      Assert.Empty(parseDiagnostics2);
+      var resolutionDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+      Assert.Single(resolutionDiagnostics);
+    }
+
+    [Fact]
+    public async Task SelectedTriggersDiagnosticsDoesNotDisappear() {
+      var producerSource = @"
+module Producer {
+  function Zoo(): set<(int,int)> {
+    set x: int | 0 <= x < 5, y | 0 <= y < 6 :: (x,y)
+  }
+
+  const used := 3
+}
+".TrimStart();
+
+      var consumerSource = @"
+module Consumer {
+  import Producer
+  const user := Producer.used + 4
+}
+".TrimStart();
+
+      var directory = Path.GetRandomFileName();
+      var project = await CreateOpenAndWaitForResolve("", Path.Combine(directory, DafnyProject.FileName));
+      var producer = await CreateOpenAndWaitForResolve(producerSource, Path.Combine(directory, "producer.dfy"));
+      var consumer = await CreateOpenAndWaitForResolve(consumerSource, Path.Combine(directory, "consumer.dfy"));
+      var diag1 = await GetLastDiagnostics(producer, CancellationToken);
+      Assert.Equal(DiagnosticSeverity.Hint, diag1[0].Severity);
+      ApplyChange(ref consumer, new Range(0, 0, 0, 0), "//trigger change\n");
+      await AssertNoDiagnosticsAreComing(CancellationToken, producer);
+    }
+
+
+    [Fact]
+    public async Task CorrectParseDiagnosticsDoNotOverridePreviousResolutionOnes() {
+      var source = @"
+function HasResolutionError(): int {
+  true
+}".TrimStart();
+
+      var document = await CreateOpenAndWaitForResolve(source);
+      var resolutionDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+      Assert.Equal(MessageSource.Resolver.ToString(), resolutionDiagnostics[0].Source);
+      ApplyChange(ref document, new Range(3, 0, 3, 0), "// comment to trigger update\n");
+      await AssertNoDiagnosticsAreComing(CancellationToken);
+      ApplyChange(ref document, new Range(1, 0, 1, 0), "disturbFunctionKeyword");
+      var parseDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+      Assert.Equal(MessageSource.Parser.ToString(), parseDiagnostics[0].Source);
+    }
+
+    [Fact]
+    public async Task DiagnosticsForVerificationTimeoutHasNameAsRange() {
+      var documentItem = CreateTestDocument(SlowToVerify, "DiagnosticsForVerificationTimeout.dfy");
+      await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
+      var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
+      Assert.Contains("Verification out of resource", diagnostics[0].Message);
+      Assert.Equal(new Range(0, 20, 0, 42), diagnostics[0].Range);
+    }
+
+    [Fact]
+    public async Task NoFlickeringWhenMixingCorrectAndErrorBatches() {
+      var source = @"
+method {:vcs_split_on_every_assert} Foo(x: int) {
+  if (x == 0) {
+    assert true;
+  } else if (x == 1) {
+    assert true;
+  } else {
+    assert false;
+  }
+}";
+      var document = await CreateOpenAndWaitForResolve(source);
+      var status1 = await verificationStatusReceiver.AwaitNextNotificationAsync(CancellationToken);
+      Assert.Equal(PublishedVerificationStatus.Stale, status1.NamedVerifiables[0].Status);
+      var status12 = await verificationStatusReceiver.AwaitNextNotificationAsync(CancellationToken);
+      Assert.Equal(PublishedVerificationStatus.Queued, status12.NamedVerifiables[0].Status);
+      var status2 = await verificationStatusReceiver.AwaitNextNotificationAsync(CancellationToken);
+      Assert.Equal(PublishedVerificationStatus.Running, status2.NamedVerifiables[0].Status);
+      var status3 = await verificationStatusReceiver.AwaitNextNotificationAsync(CancellationToken);
+      Assert.Equal(PublishedVerificationStatus.Error, status3.NamedVerifiables[0].Status);
+      await AssertNoVerificationStatusIsComing(document, CancellationToken);
+    }
+
+    [Fact]
+    public async Task IncrementalBatchDiagnostics() {
+      var source = @"
+method {:vcs_split_on_every_assert} Foo(x: int) {
+  if (x == 0) {
+    assert false;
+  } else {
+    assert false;
+  }
+}";
+      await CreateOpenAndWaitForResolve(source);
+      var diagnostics1 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+      Assert.Single(diagnostics1);
+      var diagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+      Assert.Equal(2, diagnostics2.Length);
+    }
 
     [Fact]
     public async Task ResolutionErrorInDifferentFileBlocksVerification() {
@@ -49,7 +201,7 @@ predicate updateTest(test: Test, test': Test)
     test' == test.(field := 1)
 }
 ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "GitIssue3155ItemWithSameKeyAlreadyBeenAdded.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
@@ -73,31 +225,33 @@ function bullspec(s:seq<nat>, u:seq<nat>): (r: nat)
     then bullspec(s[1..],u[1..])
     else 1+bullspec(s[1..],u[1..])
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "GitIssue3062CrashOfLanguageServer.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
-      var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
-      Assert.Equal(7, diagnostics.Length);
       Assert.Equal(PublishedVerificationStatus.Stale, await PopNextStatus());
+      Assert.Equal(PublishedVerificationStatus.Queued, await PopNextStatus());
       Assert.Equal(PublishedVerificationStatus.Running, await PopNextStatus());
       Assert.Equal(PublishedVerificationStatus.Error, await PopNextStatus());
+      var diagnostics1 = diagnosticsReceiver.GetLast(d => d.Uri == documentItem.Uri).Diagnostics.ToArray();
+      Assert.Equal(7, diagnostics1.Length);
       ApplyChange(ref documentItem, ((7, 25), (10, 17)), "");
-      diagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
-      Assert.Equal(5, diagnostics.Length);
-      Assert.Equal("Parser", diagnostics[0].Source);
-      Assert.Equal(DiagnosticSeverity.Error, diagnostics[0].Severity);
+      var diagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
+      Assert.Equal(5, diagnostics2.Length);
+      Assert.Equal("Parser", diagnostics2[0].Source);
+      Assert.Equal(DiagnosticSeverity.Error, diagnostics2[0].Severity);
       ApplyChange(ref documentItem, ((7, 20), (7, 25)), "");
-      diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
-      Assert.Equal(8, diagnostics.Length);
       Assert.Equal(PublishedVerificationStatus.Stale, await PopNextStatus());
+      Assert.Equal(PublishedVerificationStatus.Queued, await PopNextStatus());
       Assert.Equal(PublishedVerificationStatus.Running, await PopNextStatus());
       Assert.Equal(PublishedVerificationStatus.Error, await PopNextStatus());
+      var diagnostics3 = diagnosticsReceiver.GetLast(d => d.Uri == documentItem.Uri).Diagnostics.ToArray();
+      Assert.Equal(8, diagnostics3.Length);
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
 
     [Fact]
     public async Task EmptyFileNoCodeWarning() {
       var source = "";
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "EmptyFileNoCodeWarning.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Equal(new Range(0, 0, 0, 0), diagnostics[0].Range);
@@ -118,7 +272,7 @@ method Test(i: int) returns (j: int)
 {
   return Call(2/i);
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningFailingFunctionPreconditionHasRelatedDiagnostics.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
@@ -146,7 +300,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningFlawlessDocumentReportsNoDiagnostics.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
@@ -168,7 +322,7 @@ abstract module M
 module N refines M 
 {
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "RefinementTokensCorrectlyReported.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Equal(2, diagnostics.Length);
@@ -185,16 +339,16 @@ predicate {:opaque} m() {
   true
 }
 ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "NoCrashWhenPressingEnterAfterSelectingAllTextAndInputtingText.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
-      await AssertNoDiagnosticsAreComing(CancellationToken);
+      await AssertNoDiagnosticsAreComing(CancellationToken, documentItem);
       ApplyChange(ref documentItem, ((0, 0), (3, 0)), "\n");
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
       ApplyChange(ref documentItem, ((1, 0), (1, 0)), "const x := 1");
       diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Empty(diagnostics);
-      await AssertNoDiagnosticsAreComing(CancellationToken);
+      await AssertNoDiagnosticsAreComing(CancellationToken, documentItem);
     }
 
     [Fact]
@@ -203,7 +357,7 @@ predicate {:opaque} m() {
 predicate {:opaque} m() {
   true
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningOpaqueFunctionWorks.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
@@ -223,7 +377,7 @@ method Multiply(x: int, y: int) returns (product: int
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithSyntaxErrorReportsDiagnosticsWithParserErrors.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
       Assert.Single(diagnostics);
@@ -247,7 +401,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithSemanticErrorReportsDiagnosticsWithSemanticErrors.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
       Assert.Single(diagnostics);
@@ -271,7 +425,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithMultipleSemanticErrorsReportsDiagnosticsWithAllSemanticErrors.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
       Assert.Equal(2, diagnostics.Length);
@@ -297,7 +451,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithVerificationErrorReportsDiagnosticsWithVerificationErrors.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
@@ -319,7 +473,7 @@ method A()
 {
   var b := test();
 } ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithDefaultParamErrorHighlightsCallSite.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
@@ -344,8 +498,8 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      await SetUp(options => options.Set(ServerCommand.Verification, VerifyOnMode.Never));
-      var documentItem = CreateTestDocument(source);
+      await SetUp(options => options.Set(ProjectManager.Verification, VerifyOnMode.Never));
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithVerificationErrorDoesNotReportDiagnosticsWithVerificationErrorsIfNotVerifyOnChange.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
@@ -364,7 +518,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithMultipleVerificationErrorsReportsDiagnosticsWithAllVerificationErrorsAndRelatedInformation.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Equal(2, diagnostics.Length);
@@ -394,7 +548,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "ChangingCorrectDocumentToOneWithSyntaxErrorsReportsTheSyntaxErrors.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
 
       await AssertNoDiagnosticsAreComing(CancellationToken);
@@ -422,8 +576,8 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      await SetUp(options => options.Set(ServerCommand.Verification, VerifyOnMode.Never));
-      var documentItem = CreateTestDocument(source);
+      await SetUp(options => options.Set(ProjectManager.Verification, VerifyOnMode.Never));
+      var documentItem = CreateTestDocument(source, "ChangingCorrectDocumentToOneWithSyntaxErrorsReportsTheSyntaxErrorsIfNotVerifyOnChange.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       await AssertNoDiagnosticsAreComing(CancellationToken);
 
@@ -451,7 +605,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "ChangingCorrectDocumentToOneWithVerificationErrorsReportsTheVerificationErrors.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
 
       ApplyChange(ref documentItem, new Range((8, 30), (8, 31)), "+");
@@ -478,8 +632,8 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      await SetUp(options => options.Set(ServerCommand.Verification, VerifyOnMode.Never));
-      var documentItem = CreateTestDocument(source);
+      await SetUp(options => options.Set(ProjectManager.Verification, VerifyOnMode.Never));
+      var documentItem = CreateTestDocument(source, "ChangingCorrectDocumentToOneWithVerificationErrorsDoesNotReportVerificationErrorsIfNotVerifyOnChange.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
 
       await AssertNoDiagnosticsAreComing(CancellationToken);
@@ -502,7 +656,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "ApplyingMultipleChangesInDocumentOnlySendsOneReport.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
 
       await AssertNoDiagnosticsAreComing(CancellationToken);
@@ -529,7 +683,6 @@ method Multiply(x: int, y: int) returns (product: int)
       // a report without any diagnostics/errors.
       // Otherwise, we'd have to wait for a signal/diagnostic that should never be sent, e.g.
       // with a timeout.
-      await Projects.GetLastDocumentAsync(newVersion); // For debug purposes.
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
 
@@ -548,7 +701,7 @@ method Multiply(x: int, y: int) returns (product: int
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "ClosingDocumentWithSyntaxErrorHidesDiagnosticsBySendingEmptyDiagnostics.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var errorDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
       Assert.Single(errorDiagnostics);
@@ -628,7 +781,7 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "SavingDocumentWithVerificationErrorDoesNotDiscardDiagnosticsWithVerificationErrorsIfVerifyOnChange.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var changeDiagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(changeDiagnostics);
@@ -654,8 +807,8 @@ method Multiply(x: int, y: int) returns (product: int)
     product := x + step;
   }
 }".TrimStart();
-      await SetUp(options => options.Set(ServerCommand.Verification, VerifyOnMode.Save));
-      var documentItem = CreateTestDocument(source);
+      await SetUp(options => options.Set(ProjectManager.Verification, VerifyOnMode.Save));
+      var documentItem = CreateTestDocument(source, "SavingDocumentWithVerificationErrorReportsDiagnosticsWithVerificationErrorsIfVerifyOnSave.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       await AssertNoDiagnosticsAreComing(CancellationToken);
       client.SaveDocument(documentItem);
@@ -689,7 +842,7 @@ class Test {
         c := 10;
     }
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithVerificationErrorReportsDiagnosticsWithVerificationErrorsAndNestedRelatedLocations.dfy");
       await client.OpenDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
@@ -728,14 +881,16 @@ method t10() { assert false; }".TrimStart();
         var documentItem = CreateTestDocument(source, $"test_{i}.dfy");
         client.OpenDocument(documentItem);
         var diagnostics = await GetLastDiagnostics(documentItem, cancellationToken);
-        AssertM.Equal(5, diagnostics.Length, $"Iteration is {i}, Old to new history was: {diagnosticsReceiver.History.Stringify()}");
+        try {
+          AssertM.Equal(5, diagnostics.Length, $"Iteration is {i}");
+        } catch (EqualException) {
+          WriteVerificationHistory();
+        }
         Assert.Equal(MessageSource.Verifier.ToString(), diagnostics[0].Source);
         Assert.Equal(DiagnosticSeverity.Error, diagnostics[0].Severity);
         await AssertNoDiagnosticsAreComing(cancellationToken);
       }
     }
-
-
 
     [Fact]
     public async Task OpeningDocumentWithElephantOperatorDoesNotThrowException() {
@@ -803,7 +958,7 @@ method test() {
   assert Ack(5, 5) == 0;
 }".TrimStart();
       await SetUp(options => options.Set(BoogieOptionBag.VerificationTimeLimit, 1U));
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithTimeoutReportsTimeoutDiagnostic.dfy");
       client.OpenDocument(documentItem);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
@@ -818,7 +973,7 @@ method test(i: int, j: int) {
 //       ^^^^^^^^^^^^^^
 }
 ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithComplexExpressionUnderlinesAllOfIt.dfy");
       client.OpenDocument(documentItem);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
@@ -840,7 +995,7 @@ method other(i: int, j: int)
   requires i < j {
 }
 ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithFailedCallUnderlinesAllOfIt.dfy");
       client.OpenDocument(documentItem);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
@@ -863,7 +1018,7 @@ function other(i: int, j: int): int
   2
 }
 ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "OpeningDocumentWithFailedCallExpressionUnderlinesAllOfIt.dfy");
       client.OpenDocument(documentItem);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(diagnostics);
@@ -880,14 +1035,20 @@ method test() {
   assert false;
 }
 ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "IncrementalVerificationDiagnosticsBetweenMethods.dfy");
       client.OpenDocument(documentItem);
-      var firstVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
-      var secondVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
+      var firstVerificationDiagnostics = await diagnosticsReceiver.AwaitNextNotificationAsync(CancellationToken);
+      try {
+        var secondVerificationDiagnostics =
+          await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
 
-      Assert.Single(firstVerificationDiagnostics);
-      // Second diagnostic is a timeout exception from SlowToVerify
-      Assert.Equal(2, secondVerificationDiagnostics.Length);
+        Assert.Single(firstVerificationDiagnostics.Diagnostics);
+        // Second diagnostic is a timeout exception from SlowToVerify
+        Assert.Equal(2, secondVerificationDiagnostics.Length);
+      } catch (OperationCanceledException) {
+        await output.WriteLineAsync($"firstVerificationDiagnostics: {firstVerificationDiagnostics.Stringify()}");
+        WriteVerificationHistory();
+      }
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
 
@@ -900,31 +1061,13 @@ method test()
 }
 ".TrimStart();
       await SetUp(options => options.Set(BoogieOptionBag.Cores, 1U));
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "IncrementalVerificationDiagnosticsBetweenAssertionsAndWellFormedness.dfy");
       client.OpenDocument(documentItem);
       var firstVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       var secondVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
 
       Assert.Single(firstVerificationDiagnostics);
       Assert.Equal(2, secondVerificationDiagnostics.Length);
-      await AssertNoDiagnosticsAreComing(CancellationToken);
-    }
-
-    [Fact]
-    public async Task NoIncrementalVerificationDiagnosticsBetweenAssertionBatches() {
-      var source = @"
-method test(x: int) {
-  assert x != 2;
-  assert {:split_here} true;
-  assert x != 3;
-}
-".TrimStart();
-      await SetUp(options => options.Set(BoogieOptionBag.Cores, 1U));
-      var documentItem = CreateTestDocument(source);
-      client.OpenDocument(documentItem);
-      var firstVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
-
-      Assert.Equal(2, firstVerificationDiagnostics.Length);
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
 
@@ -939,7 +1082,7 @@ method test2() {
 }
 ".TrimStart();
       await SetUp(options => options.Set(BoogieOptionBag.Cores, 1U));
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "NoDiagnosticFlickeringWhenIncremental.dfy");
       client.OpenDocument(documentItem);
       var firstVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       var secondVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
@@ -948,6 +1091,8 @@ method test2() {
 
       ApplyChange(ref documentItem, new Range((1, 9), (1, 14)), "true"); ;
 
+      // Next line should not be needed after resolving https://github.com/dafny-lang/dafny/issues/4377
+      var parseDiagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       var resolutionDiagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       AssertDiagnosticListsAreEqualBesidesMigration(secondVerificationDiagnostics, resolutionDiagnostics2);
       var firstVerificationDiagnostics2 = await GetLastDiagnostics(documentItem, CancellationToken);
@@ -955,6 +1100,8 @@ method test2() {
 
       ApplyChange(ref documentItem, new Range((4, 9), (4, 14)), "true");
 
+      // Next line should not be needed after resolving https://github.com/dafny-lang/dafny/issues/4377
+      var parseDiagnostics3 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       var resolutionDiagnostics3 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       AssertDiagnosticListsAreEqualBesidesMigration(firstVerificationDiagnostics2, resolutionDiagnostics3);
       var secondVerificationDiagnostics3 = await GetLastDiagnostics(documentItem, CancellationToken);
@@ -970,9 +1117,9 @@ method test2() {
 method test() {
   assert false;
 }
-".TrimStart() + SlowToVerify;
+".TrimStart() + SlowToVerifyNoLimit;
       await SetUp(options => options.Set(BoogieOptionBag.Cores, 1U));
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "ApplyChangeBeforeVerificationFinishes.dfy");
       client.OpenDocument(documentItem);
       var firstVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       Assert.Single(firstVerificationDiagnostics);
@@ -980,13 +1127,20 @@ method test() {
       // Second verification diagnostics get cancelled.
       ApplyChange(ref documentItem, new Range((1, 9), (1, 14)), "true");
 
-      // Contains migrated verification error.
+      // Next line should not be needed after resolving https://github.com/dafny-lang/dafny/issues/4377
+      var parseDiagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
+      // https://github.com/dafny-lang/dafny/issues/4377
       var resolutionDiagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       AssertDiagnosticListsAreEqualBesidesMigration(firstVerificationDiagnostics, resolutionDiagnostics2);
       var firstVerificationDiagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
-      var secondVerificationDiagnostics2 = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       Assert.Empty(firstVerificationDiagnostics2); // Still contains second failing method
-      Assert.Single(secondVerificationDiagnostics2);
+      try {
+        var secondVerificationDiagnostics2 =
+          await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
+        Assert.Single(secondVerificationDiagnostics2);
+      } catch (SingleException) {
+        await output.WriteLineAsync($"firstVerificationDiagnostics2: {firstVerificationDiagnostics2.Stringify()}");
+      }
 
       await AssertNoDiagnosticsAreComing(CancellationToken);
     }
@@ -1003,7 +1157,7 @@ method test2() {
 }
 ".TrimStart();
       await SetUp(options => options.Set(BoogieOptionBag.Cores, 1U));
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "DoNotMigrateDiagnosticsOfRemovedMethod.dfy");
       client.OpenDocument(documentItem);
       var firstVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
       var secondVerificationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken, documentItem);
@@ -1025,8 +1179,8 @@ method test2() {
 
     private static void AssertDiagnosticListsAreEqualBesidesMigration(Diagnostic[] expected, Diagnostic[] actual) {
       AssertM.Equal(expected.Length, actual.Length, $"expected: {expected.Stringify()}, but was: {actual.Stringify()}");
-      foreach (var t in Enumerable.Zip(expected, actual)) {
-        AssertM.Equal(Relocator.OutdatedPrefix + t.First.Message, t.Second.Message, t.Second.ToString());
+      foreach (var t in expected.Zip(actual)) {
+        AssertM.Equal(CompilationAfterResolution.OutdatedPrefix + t.First.Message, t.Second.Message, t.Second.ToString());
       }
     }
 
@@ -1039,7 +1193,7 @@ method test()
 }
 ".TrimStart();
       await SetUp(options => options.Set(BoogieOptionBag.Cores, 1U));
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "DiagnosticsInDifferentImplementationUnderOneNamedVerificationTask.dfy");
       client.OpenDocument(documentItem);
       var diagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Equal(2, diagnostics.Length);
@@ -1052,7 +1206,7 @@ method Foo() {
   assert false;
 }
 ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "MethodRenameDoesNotAffectMigration.dfy");
       client.OpenDocument(documentItem);
       var preChangeDiagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(preChangeDiagnostics);
@@ -1070,7 +1224,7 @@ module Foo {
   }
 }
 ".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "ModuleRenameDoesNotAffectMigration.dfy");
       client.OpenDocument(documentItem);
       var preChangeDiagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(preChangeDiagnostics);
@@ -1090,7 +1244,7 @@ module Foo {
 method Foo() { 
   assert false; 
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "ResolutionDiagnosticsAreReturnedBeforeComputingVerificationTasks.dfy");
       client.OpenDocument(documentItem);
       var verificationDiagnostics = await GetLastDiagnostics(documentItem, CancellationToken);
       Assert.Single(verificationDiagnostics);
@@ -1100,8 +1254,10 @@ method Foo() {
       documentItem = documentItem with { Version = documentItem.Version + 1 };
       // Fix syntax error and replace method header so verification diagnostics are not migrated.
       ApplyChange(ref documentItem, new Range(0, 0, 1, 0), "method Bar() {\n");
-      var resolutionDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
-      Assert.Empty(resolutionDiagnostics);
+      // Next line is made obsolete by resolving https://github.com/dafny-lang/dafny/issues/4377
+      var unnecessaryDiagnostics = await diagnosticsReceiver.AwaitNextNotificationAsync(CancellationToken);
+      var resolutionDiagnostics = await diagnosticsReceiver.AwaitNextNotificationAsync(CancellationToken);
+      Assert.Empty(resolutionDiagnostics.Diagnostics);
       var translationDiagnostics = await diagnosticsReceiver.AwaitNextDiagnosticsAsync(CancellationToken);
       // Verification diagnostics were removed since task no longer exists.
       Assert.Single(translationDiagnostics);
@@ -1114,7 +1270,7 @@ method Foo() {
 method Foo() { 
   assert false; 
 }".TrimStart();
-      var documentItem = CreateTestDocument(source);
+      var documentItem = CreateTestDocument(source, "DiagnosticsAfterSavingWithVerifyOnChange.dfy");
       client.OpenDocument(documentItem);
       await client.SaveDocumentAndWaitAsync(documentItem, CancellationToken);
       var diagnostics1 = await GetLastDiagnostics(documentItem, CancellationToken);

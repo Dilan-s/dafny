@@ -35,13 +35,14 @@ namespace Microsoft.Dafny.LanguageServer.Handlers {
     }
 
     public override async Task<SymbolInformationOrDocumentSymbolContainer> Handle(DocumentSymbolParams request, CancellationToken cancellationToken) {
-      var state = await projects.GetResolvedDocumentAsyncNormalizeUri(request.TextDocument);
+      var state = await projects.GetParsedDocumentNormalizeUri(request.TextDocument);
       if (state == null) {
         logger.LogWarning("symbols requested for unloaded document {DocumentUri}", request.TextDocument.Uri);
         return EmptySymbols;
       }
-      var fileNode = ((Program)state.Program).Files.First(file => file.RangeToken.Uri == request.TextDocument.Uri.ToUri());
-      return fileNode.ChildSymbols.Select(topLevel => new SymbolInformationOrDocumentSymbol(FromSymbol(topLevel))).ToList();
+
+      var fileNodes = state.Program.FindNodesInUris(request.TextDocument.Uri.ToUri()).OfType<ISymbol>();
+      return fileNodes.Select(topLevel => new SymbolInformationOrDocumentSymbol(FromSymbol(topLevel))).ToList();
     }
 
     private DocumentSymbol FromSymbol(ISymbol symbol) {
